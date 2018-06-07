@@ -1,0 +1,11 @@
+'change derived solids to not user color overrides from source.  select multiple parts in assembly, changes "UseColorOverridesFromSource" to False
+
+'MsgBox(ThisApplication.ActiveDocument.ComponentDefinition.ReferenceComponents.DerivedPartComponents.Count)
+
+dPartComps = ThisApplication.ActiveDocument.ComponentDefinition.ReferenceComponents.DerivedPartComponents
+
+'enumerate the list of derived part components, changing the color override to false.  
+For Each dPartComp in dPartComps
+	dPartComp.Definition.UseColorOverridesFromSource = True
+	msgbox(dPartComp.Definition.UseColorOverridesFromSource)
+Next

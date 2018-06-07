@@ -1,0 +1,55 @@
+﻿'The purpose of this rule is to create a DXF file of the current Inventor Drawing file, and attach it as an OLE reference, so the DXF file will be checked into the vault automatically.  
+'needs to access properties of referenced part, not the drawing!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+'-----------------------------Declarations-----------------------------------
+Dim oDoc as Document = ThisApplication.ActiveDocument
+customPropertySet = ThisDoc.Document.PropertySets.Item("Inventor User Defined Properties")
+Dim DXFAddIn As TranslatorAddIn = ThisApplication.ApplicationAddIns.ItemById("{C24E3AC4-122E-11D5-8E91-0010B541CD80}")
+Dim oContext As TranslationContext = ThisApplication.TransientObjects.CreateTranslationContext
+oContext.Type = kFileBrowseIOMechanism
+Dim oOptions As NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap
+Dim oDataMedium As DataMedium = ThisApplication.TransientObjects.CreateDataMedium
+Dim oSheets As Sheets = oDoc.Sheets
+Dim strIniFile As String = "C:\_vaultWIP\Designs\Templates\Library\iLogic\dxf out.ini"
+Dim FileNameDXF As String
+Dim kOLEDocumentLinkObject As ObjectTypeEnum = 3331 'OLE link document
+Dim oRefOLE As ReferencedOLEFileDescriptors
+
+'-----------------------------Check for iProperty-----------------------------------
+'Main	
+Try 'Check for property "DXF" and create it if not found.  
+	prop = customPropertySet.Item("DXF")
+Catch
+	' Assume error means not found
+	customPropertySet.Add("", "DXF")
+	iProperties.Value("Custom", "DXF") = False
+End Try
+
+'-----------------------------Check out file warning-----------------------------------
+'Check iproperty to see if rule has been run, warn user if it has.  
+If iProperties.Value("Custom", "DXF") = True Then
+	MessageBox.Show("File has already been created.  The file must be checked out to continue.  Are you sure you want to continue?", "Existing File!",MessageBoxButtons.OKCancel)
+End If
+'-----------------------------DXF Export-----------------------------------
+'Create DXF File and set names for ZIP file
+FileName = ThisDoc.PathAndFileName(False)
+FileNameDXF = FileName & ".dxf"
+'FileNameZIP = FileName & ".zip"
+'ThisDoc.Document.SaveAs(FileNameDXF, True)
+	
+'Writes all configured options to translator addin
+If DXFAddIn.HasSaveCopyAsOptions(oDoc, oContext, oOptions) Then
+	oOptions.Value("Export_Acad_IniFile") = strIniFile
+End If
+
+oDataMedium.FileName = FileNameDXF 'sets DXF filename to Translator addin
+DXFAddin.SaveCopyAs(oDoc, oContext, oOptions, oDataMedium) 'set all options 
+	
+If iProperties.Value("Custom", "DXF") = False Then				
+	'AttachFile = MessageBox.Show("Would you like to create this file as an attachment?", "Create Attachment?",MessageBoxButtons.YesNo,MessageBoxIcon.Question)
+				
+	'If AttachFile = vbYes Then	
+		'Attach DXF as OLE Object, if it hasnt already					
+		oRefOLE.Add(FileNameDXF, OLEDocumentTypeEnum.kOLEDocumentLinkObject)
+		iProperties.Value("Custom", "DXF") = True
+	'End If
+End If

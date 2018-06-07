@@ -1,0 +1,77 @@
+'Hole Edge Distance Check
+'Purpose: measure distance from cylindrical surfaces to flat edges, and highlight if distance is < 1.5* diameter
+'get all cylindrical surfaces. 
+'measure from center line of cylindrical face to planar surfaces
+'highlight if closer than 1.5 * diameter
+'user confirms
+'clear highlight override
+
+
+Sub Main()
+	'Get applicaton level objects
+	Dim oDoc as Document = ThisApplication.ActiveDocument
+	Dim oMeasure As MeasureTools = ThisApplication.MeasureTools
+	
+	'Get component definition objects
+	Dim oDef as ComponentDefinition = oDoc.ComponentDefinition
+	Dim oSurfaceBodies as SurfaceBodies = oDef.SurfaceBodies
+	Dim oSurfaceBody As SurfaceBody = oSurfaceBodies.Item(1)
+	Dim oFaces as Faces = oSurfaceBody.Faces
+	Dim oFace As Face
+	
+	'set variables
+	Dim SSet As SelectSet = oDoc.SelectSet
+	Dim cFaceRad 'storage for measured cylindrical face radius
+	Dim EdgeDist 'storage for measured minimum distance from cylindrical face to plane
+	
+	'set lists of faces to work with.  
+	Dim CircFaceList as New List(of Face)
+	Dim PlaneFaceList as New List(of Face)
+
+	SSet.Clear
+	
+	For Each oFace In oFaces
+		If oFace.SurfaceType = SurfaceTypeEnum.kCylinderSurface Then
+			CircFaceList.Add(oFace)
+		End If
+		
+		If oFace.SurfaceType = SurfaceTypeEnum.kPlaneSurface Then	
+			PlaneFaceList.Add(oFace)
+		End If
+	Next
+	
+	If CircFaceList.Count > 0 AndAlso PlaneFaceList.Count > 0 Then
+
+		For Each cFace In CircFaceList
+			cFaceRad = cFace.Geometry.Radius
+			
+			'Iterate through PlaneFaceList, measuring from cFace.  If any distance is less than cFaceRad, select it.  
+			For Each pFace in PlaneFaceList
+				EdgeDist = oMeasure.GetMinimumDistance(cFace, pFace)
+				
+				If EdgeDist <> 0 AndAlso EdgeDist < cFaceRad Then
+					SSet.Select(cFace)
+				End If
+				
+			Next
+			
+			For Each cFace2 in CircFaceList
+				If cFace2.InternalName <> cFace.InternalName Then
+					EdgeDist = oMeasure.GetMinimumDistance(cFace, cFace2, 24833, 24833)
+					If EdgeDist < cFaceRad * 3
+						SSet.Select(cFace)
+					End If
+				End If			
+			Next
+		Next	
+		
+		If SSet.Count > 0 Then
+			MessageBox.Show("The " & SSet.Count & " selected hole(s) are too close to an edge of material or another hole.  Please review and correct as necessary.  ", "Please Correct", MessageBoxButtons.OK)	
+		Else
+			MsgBox("All good.  Have a Beer!  ")
+		End If
+	Else
+		MessageBox.Show("Part contains either no cylindrical faces, no planar faces, or both.  ", "No applicable faces.  ", MessageBoxButtons.OK, MessageBoxIcon.Error)
+	
+	End If
+End Sub 'Main

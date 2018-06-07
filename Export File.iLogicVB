@@ -1,0 +1,132 @@
+'multi format export rule
+
+Sub Main()
+'get user to select format for export
+'check to make sure the current document is compatible with selected file type
+'check by property if the files have already been created, prompt for checkout if they have
+'generate files by subroutine
+'prompt user to attach as OLE
+'save document
+
+'MODEL FORMATS
+'DWG, STP, STL
+
+'DRAWING FORMATS
+'PDF, DXF
+End Sub
+
+Sub ExportDXF(oDoc as Document, AttachFile as Boolean, )
+
+	Dim DXFAddIn As TranslatorAddIn = ThisApplication.ApplicationAddIns.ItemById("{C24E3AC4-122E-11D5-8E91-0010B541CD80}")
+	Dim oContext As TranslationContext = ThisApplication.TransientObjects.CreateTranslationContext
+	oContext.Type = kFileBrowseIOMechanism
+	Dim oOptions As NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap
+	Dim oDataMedium As DataMedium = ThisApplication.TransientObjects.CreateDataMedium
+	Dim strIniFile As String = "C:\_vaultWIP\Designs\Templates\Library\iLogic\dxf_export.ini"
+	
+	'setup file names and prepare to attach as OLE
+	Dim FileNameDXF As String
+	Dim oSheets As Sheets = oDoc.Sheets
+	Dim oSheet As Sheet
+
+	For Each oSheet in oSheets
+	
+		oSheet.Activate
+		
+		'Get sheet number
+		oCurrentSheet = Mid(oDoc.ActiveSheet.Name, InStr(1, oDoc.ActiveSheet.Name, ":")+1)
+		
+		'get filename w/o extension
+		FileName = Left(oDoc.FullDocumentName, oDoc.FullDocumentName.Length - 4)
+			
+		'Append sheet number if more than one sheet
+		If oSheets.Count > 1 Then
+			FileNameDXF = FileName & " p" & oCurrentSheet & ".dxf"
+		Else 
+			FileNameDXF = FileName & ".dxf"
+		End If
+				
+		'Writes all configured options to translator addin
+		If DXFAddIn.HasSaveCopyAsOptions(oDoc, oContext, oOptions) Then
+			oOptions.Value("Export_Acad_IniFile") = strIniFile
+		End If
+				
+		'sets DXF filename to Translator addin
+		oDataMedium.FileName = FileNameDXF 
+				
+		'Check if we have write access to file, error if not
+		Try
+			DXFAddin.SaveCopyAs(oDoc, oContext, oOptions, oDataMedium) 'set all options 
+		Catch 
+			MessageBox.Show("WHAT DID I JUST SAY!!!!  You do not have permission to write to this file, likely because you DIDNT CHECK IT OUT!!!!  ", "Permission Denied", MessageBoxButtons.OK, MessageBoxIcon.Error)
+			Return
+		End Try
+				
+		'Attach exported sheet as OLE
+		If AttachFile = vbYes Then	
+		
+			'Attach DXF as OLE Object, if it hasnt already					
+			oRefOLE = oDoc.ReferencedOLEFileDescriptors 
+			oRefOLE.Add(FileNameDXF, OLEDocumentTypeEnum.kOLEDocumentLinkObject)
+			oProp.Value = True
+					
+		End If
+				
+	Next
+	
+	
+	If AttachFile = True Then
+		AttachOLE(oDoc, FileNameDXF)
+	End If
+	
+	
+	
+	
+End Sub
+
+'Export file as PDF
+Sub ExportPDF(oDoc as Document, AttachFile as Boolean)
+
+End Sub
+
+'Export file as DWG
+Sub ExportDWG(oDoc as Document, AttachFile as Boolean)
+
+End Sub
+
+'Export file as STP
+Sub ExportSTP(oDoc as Document, AttachFile as Boolean)
+
+End Sub
+
+'Export file as STL
+Sub ExportSTL(oDoc as Document, AttachFile as Boolean)
+
+End Sub
+
+'Attach file as OLE
+Sub AttachOLE(oDoc as Document, File as String)
+	
+	Dim kOLEDocumentLinkObject As ObjectTypeEnum = 3331
+	Dim oRefOLE as ReferencedOLEFileDescriptors = oDoc.ReferencedOLEFileDescriptors 
+	oRefOLE.Add(File, OLEDocumentTypeEnum.kOLEDocumentLinkObject)
+
+End Sub
+
+'Add property as specified
+Sub AddProp(oDoc As Document, Prop as String)
+
+End Sub
+
+'Check if property exists and matches specified value
+Sub CheckProp(oDoc as Document, Prop as String)
+			If oProp.Value = True OrElse iProperties.Value("Custom", "DXF") = True Then 'check model and drawing for "DXF" (legacy compatibility)
+				attacherr = MessageBox.Show("File has already been created.  The file must be checked out to continue.  Are you sure you want to continue?", "Existing File!",MessageBoxButtons.OKCancel)
+				If attacherr = vbCancel Then
+					Return
+				End If
+				oProp.Value = True
+			Else 
+				AttachFile = MessageBox.Show("Would you like to create this file as an attachment?", "Create Attachment?",MessageBoxButtons.YesNo,MessageBoxIcon.Question)
+			End If
+End Function
