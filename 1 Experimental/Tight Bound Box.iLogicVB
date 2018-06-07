@@ -1,0 +1,246 @@
+Sub Main()
+	FindRangeBoxWithFacet(ThisApplication)
+End Sub
+
+Public Sub FindRangeBoxWithFacet(ByVal app As Inventor.Application)
+
+        Dim oDoc As Document 'AssemblyDocument
+        oDoc = app.ActiveDocument
+        ' Set a reference to component definition of the active document.
+
+        ' This assumes that a part or assembly document is active.
+        Dim oCompDef As ComponentDefinition 'AssemblyComponentDefinition
+        oCompDef = app.ActiveDocument.ComponentDefinition
+
+        Dim aoRanges As Box = Nothing
+
+        If oCompDef.SurfaceBodies.Count > 0 Then 'oCompDef.Occurrences(1).SurfaceBodies.Count
+            ' Set a reference to the body of the part.
+            Dim oBody As SurfaceBody
+            oBody = oCompDef.SurfaceBodies.Item(1) 'oCompDef.Occurrences(1).SurfaceBodies.Item(1)
+
+            Dim iVertexCount As Integer
+            Dim iFacetCount As Integer
+            Dim adVertexCoords(0) As Double
+            Dim adNormalVectors(0) As Double
+            Dim aiVertexIndices(0) As Integer
+ 
+            ' Determine the highest tolerance of the existing facet sets.
+            Dim ToleranceCount As Long
+            Dim ExistingTolerances(0) As Double
+            Call oBody.GetExistingFacetTolerances(ToleranceCount, ExistingTolerances)
+ 
+            Dim i As Long
+            Dim BestTolerance As Double
+            For i = 0 To ToleranceCount - 1
+                If i = 0 Then
+                    BestTolerance = ExistingTolerances(i)
+                ElseIf ExistingTolerances(i) < BestTolerance Then
+                    BestTolerance = ExistingTolerances(i)
+                End If
+            Next
+ 
+            Call oBody.GetExistingFacets(
+                BestTolerance,
+                iVertexCount,
+                iFacetCount,
+                adVertexCoords,
+                adNormalVectors,
+                aiVertexIndices)
+ 
+            Dim cn As Long
+            Dim minPt As Point
+            Dim maxPt As Point
+ 
+ 
+            For cn = LBound(adVertexCoords) To UBound(adVertexCoords) Step 3
+                ' The Range box can be identified by the fact that the aoRanges
+                ' variable will still be Nothing.
+                If aoRanges Is Nothing Then
+                    'Initialize the range box with the first vertex
+                    aoRanges = app.TransientGeometry.CreateBox
+                    Dim firstPt(2) As Double
+                    firstPt(0) = adVertexCoords(cn)
+                    firstPt(1) = adVertexCoords(cn + 1)
+                    firstPt(2) = adVertexCoords(cn + 2)
+                    Call aoRanges.PutBoxData(firstPt, firstPt)
+                Else
+                    minPt = aoRanges.MinPoint
+                    maxPt = aoRanges.MaxPoint
+ 
+                    If (minPt.X > adVertexCoords(cn)) Then
+                        minPt.X = adVertexCoords(cn)
+                    End If
+                    If (minPt.Y > adVertexCoords(cn + 1)) Then
+                        minPt.Y = adVertexCoords(cn + 1)
+                    End If
+                    If (minPt.Z > adVertexCoords(cn + 2)) Then
+                        minPt.Z = adVertexCoords(cn + 2)
+                    End If
+                    aoRanges.MinPoint = minPt
+                    If (maxPt.X < adVertexCoords(cn)) Then
+                        maxPt.X = adVertexCoords(cn)
+                    End If
+                    If (maxPt.Y < adVertexCoords(cn + 1)) Then
+                        maxPt.Y = adVertexCoords(cn + 1)
+                    End If
+                    If (maxPt.Z < adVertexCoords(cn + 2)) Then
+                        maxPt.Z = adVertexCoords(cn + 2)
+                    End If
+                    aoRanges.MaxPoint = maxPt
+                End If
+            Next
+        End If
+ 
+        ' Check to see if range box graphics information already exists.
+        Dim oClientGraphics As ClientGraphics
+        Dim oLineGraphics As LineGraphics
+        Dim oBoxNode As GraphicsNode
+        Dim oGraphicsData As GraphicsDataSets
+ 
+        Try
+ 
+            oGraphicsData = oDoc.GraphicsDataSetsCollection("RangeBoxGraphics")
+            oClientGraphics = oCompDef.ClientGraphicsCollection("RangeBoxGraphics")
+ 
+            oGraphicsData.Delete()
+            oClientGraphics.Delete()
+ 
+        Catch ex As Exception
+ 
+ 
+        End Try
+ 
+        ' Create a graphics data set object.  This object contains all of the
+        ' information used to define the graphics.
+        Dim oDataSets As GraphicsDataSets
+        oDataSets = oDoc.GraphicsDataSetsCollection.Add("RangeBoxGraphics")
+ 
+        ' Create a coordinate set.
+        Dim oCoordSet As GraphicsCoordinateSet
+        oCoordSet = oDataSets.CreateCoordinateSet(1)
+ 
+        ' Create the client graphics for this compdef.
+        oClientGraphics = oCompDef.ClientGraphicsCollection.Add("RangeBoxGraphics")
+ 
+        ' Set a reference to the transient geometry object for user later.
+        Dim oTransGeom As TransientGeometry
+        oTransGeom = app.TransientGeometry
+ 
+        ' Create a graphics node.
+        oBoxNode = oClientGraphics.AddNode(1)
+        oBoxNode.Selectable = False
+ 
+        ' Create line graphics.
+        oLineGraphics = oBoxNode.AddLineGraphics
+        oLineGraphics.CoordinateSet = oCoordSet
+ 
+        Dim dBoxLines(12 * 6 - 1) As Double
+ 
+        Dim MinPoint(2) As Double
+        Dim MaxPoint(2) As Double
+        Call aoRanges.GetBoxData(MinPoint, MaxPoint)
+ 
+        ' Line 1
+        dBoxLines(0) = MinPoint(0)
+        dBoxLines(1) = MinPoint(1)
+        dBoxLines(2) = MinPoint(2)
+        dBoxLines(3) = MaxPoint(0)
+        dBoxLines(4) = MinPoint(1)
+        dBoxLines(5) = MinPoint(2)
+ 
+        ' Line 2
+        dBoxLines(6) = MinPoint(0)
+        dBoxLines(7) = MinPoint(1)
+        dBoxLines(8) = MinPoint(2)
+        dBoxLines(9) = MinPoint(0)
+        dBoxLines(10) = MaxPoint(1)
+        dBoxLines(11) = MinPoint(2)
+ 
+        ' Line 3
+        dBoxLines(12) = MinPoint(0)
+        dBoxLines(13) = MinPoint(1)
+        dBoxLines(14) = MinPoint(2)
+        dBoxLines(15) = MinPoint(0)
+        dBoxLines(16) = MinPoint(1)
+        dBoxLines(17) = MaxPoint(2)
+ 
+        ' Line 4
+        dBoxLines(18) = MaxPoint(0)
+        dBoxLines(19) = MaxPoint(1)
+        dBoxLines(20) = MaxPoint(2)
+        dBoxLines(21) = MinPoint(0)
+        dBoxLines(22) = MaxPoint(1)
+        dBoxLines(23) = MaxPoint(2)
+ 
+        ' Line 5
+        dBoxLines(24) = MaxPoint(0)
+        dBoxLines(25) = MaxPoint(1)
+        dBoxLines(26) = MaxPoint(2)
+        dBoxLines(27) = MaxPoint(0)
+        dBoxLines(28) = MinPoint(1)
+        dBoxLines(29) = MaxPoint(2)
+ 
+        ' Line 6
+        dBoxLines(30) = MaxPoint(0)
+        dBoxLines(31) = MaxPoint(1)
+        dBoxLines(32) = MaxPoint(2)
+        dBoxLines(33) = MaxPoint(0)
+        dBoxLines(34) = MaxPoint(1)
+        dBoxLines(35) = MinPoint(2)
+ 
+        ' Line 7
+        dBoxLines(36) = MinPoint(0)
+        dBoxLines(37) = MaxPoint(1)
+        dBoxLines(38) = MinPoint(2)
+        dBoxLines(39) = MaxPoint(0)
+        dBoxLines(40) = MaxPoint(1)
+        dBoxLines(41) = MinPoint(2)
+ 
+        ' Line 8
+        dBoxLines(42) = MinPoint(0)
+        dBoxLines(43) = MaxPoint(1)
+        dBoxLines(44) = MinPoint(2)
+        dBoxLines(45) = MinPoint(0)
+        dBoxLines(46) = MaxPoint(1)
+        dBoxLines(47) = MaxPoint(2)
+ 
+        ' Line 9
+        dBoxLines(48) = MaxPoint(0)
+        dBoxLines(49) = MinPoint(1)
+        dBoxLines(50) = MaxPoint(2)
+        dBoxLines(51) = MaxPoint(0)
+        dBoxLines(52) = MinPoint(1)
+        dBoxLines(53) = MinPoint(2)
+ 
+        ' Line 10
+        dBoxLines(54) = MaxPoint(0)
+        dBoxLines(55) = MinPoint(1)
+        dBoxLines(56) = MaxPoint(2)
+        dBoxLines(57) = MinPoint(0)
+        dBoxLines(58) = MinPoint(1)
+        dBoxLines(59) = MaxPoint(2)
+ 
+        ' Line 11
+        dBoxLines(60) = MinPoint(0)
+        dBoxLines(61) = MinPoint(1)
+        dBoxLines(62) = MaxPoint(2)
+        dBoxLines(63) = MinPoint(0)
+        dBoxLines(64) = MaxPoint(1)
+        dBoxLines(65) = MaxPoint(2)
+ 
+        ' Line 12
+        dBoxLines(66) = MaxPoint(0)
+        dBoxLines(67) = MinPoint(1)
+        dBoxLines(68) = MinPoint(2)
+        dBoxLines(69) = MaxPoint(0)
+        dBoxLines(70) = MaxPoint(1)
+        dBoxLines(71) = MinPoint(2)
+ 
+        ' Assign the points into the coordinate set.
+        Call oCoordSet.PutCoordinates(dBoxLines)
+       ' Update the display.
+       app.ActiveView.Update()
+	   
+	   oCompDef.ClientGraphicsCollection.Delete("RangeBoxGraphics")
+End Sub

@@ -1,0 +1,16 @@
+Dim odrawdoc As DrawingDocument
+odrawdoc = ThisApplication.ActiveDocument
+customPropertySet = odrawdoc.PropertySets.Item("Inventor User Defined Properties")
+Try
+      prop = customPropertySet.Item("iLogicPrintDate")
+Catch
+      customPropertySet.Add("", "iLogicPrintDate")
+End Try
+Try
+Dim PlotDate As Date
+PlotDate = Now
+
+iProperties.Value("Custom", "iLogicPrintDate") = PlotDate
+Catch
+End Try
+InventorVb.DocumentUpdate()

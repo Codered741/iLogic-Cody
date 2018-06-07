@@ -1,0 +1,32 @@
+Private Sub Main
+    UpdateAssyBrowser(ThisDoc.Document)
+End Sub
+
+  Private Sub UpdateAssyBrowser(ByVal oDoc As Inventor.Document)
+    Dim oAssy As Inventor.AssemblyDocument
+    Dim oComp As Inventor.ComponentOccurrence
+    Dim oSubDoc As Inventor.Document
+
+    Dim NodeName() As String
+    Dim InstNum As String
+
+    If oDoc.DocumentType = Inventor.DocumentTypeEnum.kAssemblyDocumentObject Then
+      oAssy = CType(oDoc, AssemblyDocument)
+
+      For Each oComp In oAssy.ComponentDefinition.Occurrences
+        oSubDoc = CType(oComp.Definition.Document, Document)
+		'If Left(oComp.Name,7) = "PlyWood" Then
+			'If oSubDoc.DocumentType = Inventor.DocumentTypeEnum.kPartDocumentObject Then
+				'MessageBox.show("Matching Part file found!")
+				
+				
+				
+			'End If
+		'End If
+        'If oSubDoc.DocumentType = Inventor.DocumentTypeEnum.kAssemblyDocumentObject Then
+        '  Call UpdateAssyBrowser(oSubDoc)
+        'End If
+
+      Next oComp
+    End If
+  End Sub

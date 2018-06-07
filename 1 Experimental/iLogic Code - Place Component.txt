@@ -1,0 +1,13 @@
+' Inform the command manager which file you are about to place using iLogic
+ThisApplication.CommandManager.PostPrivateEvent(PrivateEventTypeEnum.kFileNameEvent, "C:\CAD WIP\STORMTROOPER.ipt")
+' Run the 'Place' command - rule will continue to run in the background while you are placing....
+ThisApplication.CommandManager.ControlDefinitions.Item("AssemblyPlaceComponentCmd").Execute()
+
+MsgBox("Continuing to run iLogic rule in background....", 64, "Cadline iLogic")
+
+' Inform the command manager which file you are about to place using iLogic
+ThisApplication.CommandManager.PostPrivateEvent(PrivateEventTypeEnum.kFileNameEvent, "C:\CAD WIP\STORMTROOPER.ipt")
+' Run the 'Place' command - rule will wait until you have finished placing components....
+ThisApplication.CommandManager.ControlDefinitions.Item("AssemblyPlaceComponentCmd").Execute2(True)
+
+MsgBox("You’ve finished placing components - Now continuing to run iLogic rule....", 64, "Cadline iLogic")

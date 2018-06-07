@@ -1,0 +1,69 @@
+﻿Dim oDoc As DrawingDocument:  oDoc = ThisDoc.Document
+oModelDoc = ThisDoc.ModelDocument
+
+Dim oSheets As Sheets
+Dim oSheet As Sheet
+Dim oViews As DrawingViews
+Dim oView As DrawingView
+
+ViewLetter = New String(){"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","X","W","Y","Z"}
+Dim ViewCount = 0
+
+oSheets = oDoc.Sheets
+
+Dim view_asso_draft = 10506
+Dim view_auxillary = 10499
+Dim view_custom = 10498
+Dim view_default = 10497
+Dim view_detail = 10502
+Dim view_draft = 10505
+Dim view_OLE = 10500
+Dim view_overlay = 10507
+Dim view_projected = 10504
+Dim view_section = 10503
+Dim view_standard = 10501
+
+For Each oSheet In oSheets
+oViews = oSheet.DrawingViews
+    For Each oView In oViews
+        ' Set a reference to the mass properties object.
+        'Dim oMassProps As MassProperties = oModelDoc.ComponentDefinition.MassProperties    
+        
+        ' Set the accuracy to medium.
+        'oMassProps.Accuracy = MassPropertiesAccuracyEnum.k_Low    
+        'Dim M As Double = oMassProps.Mass
+        If oSheet.Name <> "Title Page:1" Then
+			'Set label as visible
+			oView.ShowLabel = True
+		Else
+			oView.ShowLabel = False
+    	End If
+		
+        'Create the label strings    
+        oView_line1_standard = "<Br/><StyleOverride Underline='False'><DrawingViewName/> </StyleOverride>"
+        oView_line1_detail = "<Br/><StyleOverride Underline='False'>DETAIL <DrawingViewName/></StyleOverride>"
+        oView_line1_section = "<Br/><StyleOverride Underline='False'>SECTION <DrawingViewName/>-<DrawingViewName/></StyleOverride>"
+        'oView_line2 = "<Br/><StyleOverride Underline='False'>SCALE: <DrawingViewScale/></StyleOverride>"
+      
+            
+        'check view types 
+        If oView.ViewType = view_detail Then
+            'if detail view display this label        
+            oView.Label.FormattedText =  oView_line1_detail & oView_line2
+            'rename as the next character in the ViewCount array
+            oView.Name = ViewLetter(ViewCount)
+            ViewCount = ViewCount + 1
+            
+        Else If oView.ViewType = view_section Then
+            'if section view display this label        
+            oView.Label.FormattedText =  oView_line1_section & oView_line2
+            'rename as the next character in the ViewCount array
+            oView.Name = ViewLetter(ViewCount)
+            ViewCount = ViewCount + 1
+            
+        Else
+            'else display this label as default        
+            oView.Label.FormattedText =  oView_line1_standard & oView_line2 & oView_line3
+        End If
+    Next
+Next

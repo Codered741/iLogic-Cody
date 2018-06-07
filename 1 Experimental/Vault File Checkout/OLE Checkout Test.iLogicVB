@@ -1,0 +1,42 @@
+'OLE Checkout Test
+Dim oDoc as Document = ThisApplication.ActiveDocument
+Dim oCommandMgr As CommandManager = ThisApplication.CommandManager
+Dim oRefOLE As ReferencedOLEFileDescriptors = oDoc.ReferencedOLEFileDescriptors
+
+Dim oRefSet As SelectSet
+
+vbContinue = MessageBox.Show(oRefOLE.Count & " files will be checked out.  ", "Continue",MessageBoxButtons.YesNo, MessageBoxIcon.Question)
+
+If vbContinue = vbYes
+	' 'MessageBox.Show("Checking out Files")
+	' For Each oRef In oRefOLE 
+	' 'MessageBox.Show(oRef.Type)
+		' If oRef.OLEDocumentType = 3331 Then 
+			' 'If right(oRef.FullFileName,3) = "dxf"
+			
+				' oDoc.SelectSet.Select(oRef)
+				
+				' oCommandMgr.ControlDefinitions.Item("VaultCheckout").Execute
+				
+				' MessageBox.Show(oRef.DisplayName & " is now checked out", "Check out")
+			' 'End If
+		' End If
+	' Next
+	For each ref in oRefOLE
+		oRefSet = oDoc.SelectSet.Select(ref)
+	Next
+	
+	
+	For Each oRef in oRefSet
+	'MessageBox.Show(oRef.Type)
+		If oRef.OLEDocumentType = 3331 Then 
+			'If right(oRef.FullFileName,3) = "dxf"
+				
+				oCommandMgr.ControlDefinitions.Item("VaultCheckout").Execute
+				
+				MessageBox.Show(oRef.DisplayName & " is now checked out", "Check out")
+			'End If
+		End If
+	Next
+End If
+

@@ -1,0 +1,2 @@
+'test to reserve license
+ThisApplication.ReserveLicense(ThisApplication.UserName)

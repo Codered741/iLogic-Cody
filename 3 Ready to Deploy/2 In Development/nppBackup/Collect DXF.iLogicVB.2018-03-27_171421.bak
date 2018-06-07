@@ -1,0 +1,77 @@
+'Collect, Zip?, and Attach DXF's to Drawing
+Imports System.IO
+Imports System.IO.Path
+Imports System.Collections
+Imports My.Computer.FileSystem
+
+Sub Main()
+
+	Dim oDoc as Document = ThisApplication.ActiveDocument
+	If Not isDwg(oDoc) Then
+		MsgBox("Please run from a Drawing file.  ")
+		Exit Sub
+	End If
+	
+
+	Dim collectFolder As String = FilePath(oDoc.FullFileName) & BaseFilename(oDoc.FullFileName) & " DXF\"
+	
+	
+	
+	Dim oRefDocs as DocumentsEnumerator = oDoc.AllReferencedDocuments
+	Dim copiedFileName As String
+	
+	For Each oRefDoc in oRefDocs
+		Dim iProps as PropertySet = oRefDoc.PropertySets.Item("Design Tracking Properties")
+		Dim pn = iProps.Item("Part Number")
+		
+		FileNameDXF = FilePath(oRefDoc.FullFileName) & pn.Value & ".dxf"
+		
+		MsgBox(FileNameDXF)
+		
+		If System.IO.File.Exists(FileNameDXF) Then 'search for single page drawings
+			copiedFileName = collectFolder & BaseFilename(FileNameDXF) & ".dxf"
+			System.IO.Directory.CreateDirectory(collectFolder)
+			My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName)
+		End If
+		
+		For i = 1 to 10 'search for pages 1-10
+			FileNameDXF = FilePath(oRefDoc.FullFileName) & pn.Value & " p" & i & ".dxf"
+			If System.IO.File.Exists(FileNameDXF) Then
+				copiedFileName = collectFolder & BaseFilename(FileNameDXF) & " p" & i & ".dxf"
+				System.IO.Directory.CreateDirectory(collectFolder)
+				My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName)
+			End If
+		Next 
+	Next
+	
+	If System.IO.File.Exists(collectFolder) Then
+		Process.Start(collectFolder)
+	End If
+	
+End Sub
+
+Function isDwg(ThisDoc as Document) As Boolean
+	Debug.Print (ThisDoc.DocumentType)
+	If ThisDoc.DocumentType = kDrawingDocumentObject
+		isDwg = True
+	Else 
+		isDwg = False
+	End If
+End Function
+
+Function DocumentFileName(Doc As Document) As String
+	Dim FilePath as String
+	FilePath = Doc.FullFileName
+	DocumentFileName = IO.Path.GetFileNameWithoutExtension(FilePath)
+	'MsgBox(DocumentFileName)
+End Function
+
+Function BaseFilename(ByVal fullFilename As String) As String
+    Dim temp As String
+    temp = Right(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
+    BaseFilename = Left(temp, InStrRev(temp, ".") - 1)
+End Function
+
+Public Function FilePath(ByVal fullFilename As String) As String
+    FilePath = Left(fullFilename, InStrRev(fullFilename, "\"))
+End Function

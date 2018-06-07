@@ -1,0 +1,36 @@
+'Reset DXF Attach
+
+'rule to remove DXF OLE's from drawing and delete "DXF" iProperty from part
+
+Sub Main()
+	
+	Dim oDoc As DrawingDocument
+	
+	Try
+		oDoc = ThisApplication.ActiveEditDocument
+	Catch 
+		MsgBox("Run rule from drawing file.  ")
+		Exit Sub
+	End Try
+	
+	Dim oRefOLEs = oDoc.ReferencedOLEFileDescriptors
+	
+	For Each oRefOLE In oRefOLEs
+		If oRefOLE.FullFileName.Contains("dxf") Then
+			oRefOLE.Delete
+		End If
+	Next
+	
+	
+	Dim oRefDoc = oDoc.AllReferencedDocuments.Item(1)
+	Dim custPropSetRef = oRefDoc.PropertySets.Item("Inventor User Defined Properties")
+	Dim pRefDXF = custPropSetRef.Item("DXF")
+
+	pRefDXF.Value = False
+	
+	Dim custPropSet = oDoc.PropertySets.Item("Inventor User Defined Properties")
+	Dim pDXF = custPropSet.Item("DXF")
+	
+	pDXF.Value = False
+	
+End Sub

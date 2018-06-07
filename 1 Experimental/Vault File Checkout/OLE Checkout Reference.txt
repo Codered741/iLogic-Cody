@@ -1,0 +1,66 @@
+'AUTHOR: Cody Redding 
+'CONTACT: Codered741@gmail.com
+'LAST MODIFIED: 20170825
+'STATUS: Experimental
+'LICENSE: Free to redistribute without authorization
+
+'DESCRIPTION: Check out specified file.  
+Sub Main()
+	Dim oDoc As DrawingDocument = ThisApplication.ActiveDocument
+	Dim oCommandMgr As CommandManager = ThisApplication.CommandManager
+
+	Dim CheckoutDocList (0 to 1) as Document 
+
+	CheckoutDocList(0) = "C:\_vaultWIP\Designs\Templates\TT_Part.ipt"
+	CheckoutDocList(1) = "C:\_vaultWIP\Designs\Templates\TT_Kit.iam"
+
+	For Each Doc in CheckoutDocList
+
+		oCommandMgr.ControlDefinitions.Item("VaultGetCheckout").Execute
+		
+	Next
+End Sub
+
+'Need to add references to applicable DLL's
+'Need to get connection data
+
+'https://forums.autodesk.com/t5/vault-customization/checking-in-and-out-a-file/td-p/4310663
+' Private Shared Sub downloadFile(connection As VDF.Vault.Currency.Connections.Connection, file As VDF.Vault.Currency.Entities.FileIteration, folderPath As String)
+	
+	' Dim settings AsNew VDF.Vault.Settings.AcquireFilesSettings(connection)
+
+	' 'wB added
+	' settings.DefaultAcquisitionOption = VDF.Vault.Settings.AcquireFilesSettings.AcquisitionOption.Checkout Or VDF.Vault.Settings.AcquireFilesSettings.AcquisitionOption.Download
+
+	' 'wB end added
+	' settings.AddEntityToAcquire(file)
+	' settings.LocalPath = New VDF.Currency.FolderPathAbsolute(folderPath)
+	' connection.FileManager.AcquireFiles(settings)
+
+' End Sub
+
+
+' 'Vault API Reference
+' 'Imports VDF = Autodesk.DataManagement.Client.Framework
+
+' AddReference "C:\Program Files (x86)\Autodesk\Autodesk Vault 2017 SDK\bin\x64\Autodesk.DataManagement.Client.Framework.xml"
+
+' Public Sub DownlodFiles(fileIters As ICollection(OfVDF.Vault.Currency.Entities.FileIteration))
+
+       ' ' download individual files to a temp location
+
+       ' Dim settings As NewVDF.Vault.Settings.AcquireFilesSettings(m_conn)
+
+       ' settings.LocalPath = NewVDF.Currency.FolderPathAbsolute("c:\temp")
+
+       ' For Each fileIter AsVDF.Vault.Currency.Entities.FileIteration In fileIters
+
+              ' settings.AddFileToAcquire(fileIter, VDF.Vault.Settings.AcquireFilesSettings.AcquisitionOption.Download)
+
+       ' Next
+
+ 
+
+       ' Dim results As VDF.Vault.Results.AcquireFilesResults = m_conn.FileManager.AcquireFiles(settings)
+
+' End Sub

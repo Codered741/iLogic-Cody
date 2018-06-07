@@ -1,0 +1,45 @@
+Sub Main()
+
+	'current document
+	Dim doc as Inventor.Document = ThisDoc.Document
+	'Verify the current document has been saved.
+	If doc.FullFileName = "" Then
+		MessageBox.Show("This document must be saved first.")
+		Exit Sub
+	End If
+
+	'default folder
+	Dim FolderName As String = Left$(doc.FullFileName, InStrRev(doc.FullFileName, "\") )
+	Dim selectedfile As String = String.Empty
+	Dim oFileDlg As inventor.FileDialog = Nothing
+	InventorVb.Application.CreateFileDialog(oFileDlg)
+	oFileDlg.Filter = "Dwg files (*.dwg)|*.dwg|"
+	oFileDlg.InitialDirectory = FolderName
+	oFileDlg.CancelError = True
+	oFileDlg.MultiSelectEnabled = True
+	Try
+		oFileDlg.ShowOpen()
+		selectedfile = oFileDlg.FileName
+	Catch
+		Return 'operation was cancelled by the user
+	End Try
+	
+	AssociativelyImportAutoCADDWGSample(selectedfile)
+	
+End Sub 'Main
+
+Sub AssociativelyImportAutoCADDWGSample(File As String)
+    Dim oDoc As PartDocument
+    oDoc = ThisApplication.Documents.Add(kPartDocumentObject)
+    
+    Dim oPartCompDef As PartComponentDefinition
+    oPartCompDef = oDoc.ComponentDefinition
+    
+    ' Create the ImportedDWGComponentDefinition bases on an AutoCAD file
+    Dim oImportedDWGCompDef As ImportedDWGComponentDefinition
+    oImportedDWGCompDef = oPartCompDef.ReferenceComponents.ImportedComponents.CreateDefinition(File)
+
+    ' Import the AutoCAD DWG
+    Dim oImportedComp As ImportedComponent
+    oImportedComp = oPartCompDef.ReferenceComponents.ImportedComponents.Add(oImportedDWGCompDef)
+End Sub

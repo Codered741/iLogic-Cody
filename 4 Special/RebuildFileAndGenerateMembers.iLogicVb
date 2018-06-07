@@ -1,0 +1,82 @@
+﻿
+' CREATED BY: Filemon Salas
+' DATE: 01/2015
+' LICENSE: Free
+ 
+Sub Main()
+	
+	doc = ThisDoc.Document
+	If (doc.DocumentType = DocumentTypeEnum.kPartDocumentObject) Then 
+
+		'MessageBox.Show("This is a part file.","Information",MessageBoxButtons.OK , MessageBoxIcon.Information)
+		rebuildAndGenerateMembersForPartFactory()
+		
+	ElseIf (doc.DocumentType = DocumentTypeEnum.kAssemblyDocumentObject) Then
+		
+		'MessageBox.Show("This is an Assembly file.","Information",MessageBoxButtons.OK , MessageBoxIcon.Information)
+		rebuildAndGenerateMembersForAssemblyFactory()
+	Else 
+	
+		MessageBox.Show("This is not an iPart nor an iAssembly file.","Information",MessageBoxButtons.OK , MessageBoxIcon.Information)
+		Return
+	End If
+
+End Sub 
+
+ 	
+	Private memberList As ArrayList = New ArrayList()
+	Private memberListText As String
+
+Sub rebuildAndGenerateMembersForPartFactory()
+
+	pDoc = ThisDoc.Document
+	pDoc.Rebuild()
+
+	Dim partDoc As PartDocument = pDoc
+	Dim compDef As PartComponentDefinition = partDoc.ComponentDefinition
+
+		If (Not compDef.IsiPartFactory) Then 
+			MessageBox.Show("There are no Factory Members in this document. This is not an iPART file.","Information",MessageBoxButtons.OK, MessageBoxIcon.Information)
+			Return
+		Else
+			Dim factory As iPartFactory = compDef.iPartFactory
+		
+			For Each row As iPartTableRow In factory.TableRows
+				' add members to array
+				memberList.Add(row.MemberName)
+				' add members to string varible
+				memberListText &= " - " + row.MemberName + vbCrLf
+	  			factory.CreateMember(row)
+			Next
+			
+			MessageBox.Show("The part has been rebuilt and the following factory members have been generated:" + vbCrLf + vbCrLf + memberListText,"Information",MessageBoxButtons.OK , MessageBoxIcon.Information)
+		End If
+End Sub
+
+Sub rebuildAndGenerateMembersForAssemblyFactory()
+
+	aDoc = ThisDoc.Document
+	aDoc.Rebuild()
+
+	Dim assemblyDoc As AssemblyDocument = aDoc
+	Dim compDef As AssemblyComponentDefinition = assemblyDoc.ComponentDefinition
+
+		If (Not compDef.IsiAssemblyFactory) Then 
+			MessageBox.Show("There are no Factory Members in this document. This is not an iASSEMBLY file.","Information",MessageBoxButtons.OK, MessageBoxIcon.Information)
+			Return
+		Else
+			Dim factory As iAssemblyFactory = compDef.iAssemblyFactory
+		
+			For Each row As iAssemblyTableRow In factory.TableRows
+				' add members to array
+				memberList.Add(row.MemberName)
+				' add members to string varible
+				memberListText &= " - " + row.MemberName + vbCrLf
+	  			factory.CreateMember(row)
+			Next
+			
+			MessageBox.Show("The assembly has been rebuilt and the following factory members have been generated:" + vbCrLf + vbCrLf + memberListText,"Information",MessageBoxButtons.OK , MessageBoxIcon.Information)
+		End If
+End Sub
+
+

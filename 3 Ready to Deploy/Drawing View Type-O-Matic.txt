@@ -1,0 +1,42 @@
+Sub Main()
+Dim odoc As DrawingDocument
+odoc = ThisApplication.ActiveDocument
+'active sheet
+Dim tmpSheet As Sheet
+tmpSheet = odoc.ActiveSheet
+Dim tmpView As DrawingView
+'every draring view
+For Each tmpView In tmpSheet.DrawingViews
+Dim myDrawingViewName As String
+'Which text for which orientation
+Select Case tmpView.Camera.ViewOrientationType
+Case ViewOrientationTypeEnum.kBackViewOrientation
+myDrawingViewName = "REAR VIEW"
+Case ViewOrientationTypeEnum.kBottomViewOrientation
+myDrawingViewName = "BOTTOM VIEW"
+Case ViewOrientationTypeEnum.kFrontViewOrientation
+myDrawingViewName = "FRONT VIEW"
+Case ViewOrientationTypeEnum.kIsoBottomLeftViewOrientation
+myDrawingViewName = "ISO - BOTTOM LEFT VIEW"
+Case ViewOrientationTypeEnum.kIsoBottomRightViewOrientation
+myDrawingViewName = "ISO - BOTTOM RIGHT VIEW"
+Case ViewOrientationTypeEnum.kIsoTopLeftViewOrientation
+myDrawingViewName = "ISO TOP LEFT VIEW"
+Case ViewOrientationTypeEnum.kIsoTopRightViewOrientation
+myDrawingViewName = "ISO - TOP RIGHT VIEW"
+Case ViewOrientationTypeEnum.kLeftViewOrientation
+myDrawingViewName = "LEFT SIDE VIEW"
+Case ViewOrientationTypeEnum.kRightViewOrientation
+myDrawingViewName = "RIGHT SIDE VIEW"
+Case ViewOrientationTypeEnum.kTopViewOrientation
+myDrawingViewName = "TOP VIEW"
+Case Else
+myDrawingViewName = ""
+End Select
+'Chang if view orientation was found
+If Not myDrawingViewName = "" Then
+'change drawing view name
+tmpView.Name = myDrawingViewName
+End If
+Next
+End Sub

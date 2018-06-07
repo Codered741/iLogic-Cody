@@ -1,0 +1,14 @@
+Dim oDoc As Document = ThisApplication.ActiveEditDocument
+Dim oSurfaceBodies as SurfaceBodies = oDoc.ComponentDefinition.SurfaceBodies
+Dim oSurfaceBody As SurfaceBody = oSurfaceBodies.Item(1)
+Dim oFaces as Faces = oSurfaceBody.Faces
+Dim oFace As Face
+Dim i As Integer = 0
+
+For Each oFace In oFaces
+	If oFace.SurfaceType = SurfaceTypeEnum.kCylinderSurface Then
+		i = i+1
+	End If
+Next
+ 
+MsgBox(i)

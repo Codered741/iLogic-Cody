@@ -1,0 +1,27 @@
+﻿Sub Main()    
+
+Dim oControlDefs As ControlDefinitions    
+
+oControlDefs = ThisApplication.CommandManager.ControlDefinitions
+
+ 
+
+Dim oControlDef As ControlDefinition        
+
+Open "C:\temp\CommandNames.txt" For Output As #1
+
+    Print #1, Tab(10); "Command Name"; Tab(75); "Description"; vbNewLine        
+
+ 
+
+For Each oControlDef In oControlDefs
+
+        Print #1, oControlDef.InternalName;  Tab(55);   oControlDef.DescriptionText            
+
+Next    
+
+Close #1
+
+ 
+
+End Sub

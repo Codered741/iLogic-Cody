@@ -1,0 +1,18 @@
+﻿'AUTHOR: Cody Redding 
+'CONTACT: Codered741@gmail.com
+'LAST MODIFIED: 20170721
+'STATUS: Probably Working, needs additions
+'LICENSE: Free to redistribute without authorization
+
+'FUNCTION:
+'rebuild current ipart row
+'curently only works with iparts, not assemblie
+'rule only works in ipart files, and needs error checking
+
+Dim oDoc as Document = ThisApplication.ActiveDocument
+Dim oCompDef as ComponentDefinition = oDoc.ComponentDefinition
+Dim oFactory As iPartFactory = oCompDef.iPartFactory
+
+oDoc.Rebuild()
+oFactory.CreateMember(oFactory.DefaultRow.Index)
+MessageBox.Show("Generated " & oFactory.DefaultRow.MemberName, "Success")

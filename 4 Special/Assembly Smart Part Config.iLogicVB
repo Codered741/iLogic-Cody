@@ -1,0 +1,403 @@
+﻿AddReference "C:\ProgramData\Tait Towers\Inventor Epicor Material Search\TaitTowers.Inventor.Epicor.dll" 
+
+Sub Main()
+	Dim oDoc As Document = ThisApplication.ActiveEditDocument
+	Dim comps As SelectSet = oDoc.SelectSet
+	Dim comp As ComponentOccurrence
+
+	Dim OPList(0 to 31) As String 
+		
+		OPList(0)=" "
+		OPList(1)="OP009:Lathe CNC~"
+		OPList(2)="OP010:Mill CNC~"
+		OPList(3)="OP011:Router CNC~"
+		OPList(4)="OP012:Mill Manual~"
+		OPList(5)="OP013:Lathe Manual~"
+		OPList(6)="OP014:Cutting~"
+		OPList(7)="OP015:OS - Milling~"
+		OPList(8)="OP016:Rolling~"
+		OPList(9)="OP017:Bending~"
+		OPList(10)="OP020:Paint~"
+		OPList(11)="OP022:OS - Turning~"
+		OPList(12)="OP023:OS - 2D Laser~"
+		OPList(13)="OP024:OS - Waterjetting~"
+		OPList(14)="OP034:OS - Forming~"
+		OPList(15)="OP035:OS - 3D Laser~"
+		OPList(16)="OP036:OS - TIG Welding~"
+		OPList(17)="OP038:OS - Turnkey Fabrication~"
+		OPList(18)="OP039:OS - Powder Coating~"
+		OPList(19)="OP040:OS – Anodizing~"
+		OPList(20)="OP041:OS - Injection Molding~"
+		OPList(21)="OP060:OS – Misc~"
+		OPList(22)="OP061:Softgoods - Fabrication~"
+		OPList(23)="OP062:Control – Fabrication~"
+		OPList(24)="OP071:OS - 2D Laser & Form~"
+		OPList(25)="OP080:OS – Plating~"
+		OPList(26)="OP086:OS – Polishing~"
+		OPList(27)="OP110:OS - Routing~"
+		OPList(28)="OP139:3D – Printing~"
+		OPList(29)="OP141:OS - Upholstery~"
+		OPList(30)="OP145:Post Processing~"
+		OPList(31)="OP146:Laser Cutting / Etching~"
+		
+	Dim MBList(0 to 1) as String
+		
+		MBList(0)="Make"
+		MBList(1)="Buy"
+		
+	Dim VSList(0 to 1) As String
+		
+		VSList(0) = "False"
+		VSList(1) = "True"
+
+	' Are we in a Assembly Document?	
+	If oDoc.DocumentType <> kAssemblyDocumentObject Then
+		
+		MessageBox.Show("This command can only be used in an Assembly.")
+		
+	Else
+		If comps.count > 0 Then 
+			go = MessageBox.Show("This will change all selected parts to the same values.  Values to be changed are Make/Buy, Operations, and Materials.  Area you sure you want to continue with the current selection set?  ALL CURRENT VALUES WILL BE REPLACED!! ", "Continue?",MessageBoxButtons.YesNo)
+			
+			If go = vbNo Then
+				Exit Sub
+			End If
+			
+			oDesigner = InputBox("Enter Designer Name", "Designer")
+			oDetailer = InputBox("Enter Detailer Name", "Detailer")
+			oCheckedBy = InputBox("Enter Checked By Name", "Checked By")			
+			
+			'Make Selections
+			oMB = InputListBox("Select Make-Buy", MBList, MBList(0), "Make-Buy", "Select One")
+			
+			If oMB = "Make" Then
+			
+				oOP1 = InputListBox("Select 1st Operation", OPList, OPList(0), "Operation 1", "Available Operations")
+				oOP2 = InputListBox("Select 2nd Operation", OPList, OPList(0), "Operation 2", "Available Operations")
+				oOP3 = InputListBox("Select 3rd Operation", OPList, OPList(0), "Operation 3", "Available Operations")
+				oOP4 = InputListBox("Select 4th Operation", OPList, OPList(0), "Operation 4", "Available Operations")
+				
+				epMtl = MessageBox.Show("Would you like to select an Epicor material?", "Stock?",MessageBoxButtons.YesNo)
+				
+				If epMtl = vbYes Then
+					
+					Using dlg As New TaitTowers.Inventor.Epicor.Forms.PartSearchForm
+
+					' assign the param and property to the form
+					  Dim i As Integer = dlg.ShowDialog()
+
+					  If i <> vbOK Then Return
+
+						oMtlNum = dlg.MaterialNum
+						oMtlDesc = dlg.MaterialDesc
+
+					End Using
+					
+				Else
+				
+					oVendorSupply = InputListBox("Vendor Supplied Material?", VSList, VSList(0), "Vendor Supplied Material", "Options")
+					If oVendorSupply = "False"
+						oMtlNum = InputBox("Enter New Material Number: ", "Material Number", "")
+					Else  
+						oMtlNum = "--Vendor Supplied--"
+					End If
+					oMtlDesc = InputBox("Enter New Material Description: ", "Material Description", "")
+					
+					
+				End If
+				
+			End If
+			
+			'apply selections to parts  ////////////////////////////////////////////////////////////////
+				numParts = comps.count
+				For Each comp In comps
+				
+					'SmartPartPropAdd(comp.Name)
+					
+					'Parameter(comp.Name, "MB") = oMB
+					Parameter(comp.Name, "OP1") = oOP1
+					Parameter(comp.Name, "OP2") = oOP2
+					Parameter(comp.Name, "OP3") = oOP3
+					Parameter(comp.Name, "OP4") = oOP4
+					
+					oOPS = oOP1 & oOP2 & oOP3 & oOP4
+					
+					iProperties.Value(comp.Name, "Custom", "MATERIAL NUMBER") = oMtlNum
+					iProperties.Value(comp.Name, "Custom", "MATERIAL DESCRIPTION") = oMtlDesc
+					iProperties.Value(comp.Name, "Project", "Designer") = oDesigner
+					iProperties.Value(comp.Name, "Custom", "Detailer") = oDetailer
+					iProperties.Value(comp.Name, "Status", "Checked By") = oCheckedBy
+					
+					Select Case oVendorSupply
+						Case "False"
+							Parameter(comp.Name, "VendorSupplyMtl") = False
+						Case "True"
+							Parameter(comp.Name, "VendorSupplyMtl") = True
+					End Select
+					
+					'SmartPartConfig(comp.Name)
+					
+				Next
+				
+				MessageBox.Show(numParts & " part(s) were changed", "Success")
+				
+		Else
+			MessageBox.Show("Please select one or more component(s).  ", "Error")
+		End If
+	End If
+End Sub
+
+
+Sub SmartPartConfig(oDoc as Document)
+	'Declarations
+	'Dim oDoc As Document = ThisApplication.ActiveDocument 
+	Dim oUOM As UnitsOfMeasure = oDoc.UnitsOfMeasure 
+	Dim oUOMstr As String = oUOM.GetStringFromType(oUOM.LengthUnits) 'for user prompt
+	Dim oUnitsEnum as Integer = oUom.LengthUnits
+	Dim sizes As New List(Of Double)
+	Dim LString as String
+	Dim WString as String
+	Dim TString as String
+
+	' If oDoc.DocumentType = kDrawingDocumentObject Then
+		' MessageBox.Show("Smart Part Config can only be run in a Part or Assembly", "File Type Error")
+	' Else If oDoc.DocumentType = kPresentationDocumentObject Then	
+		' MessageBox.Show("Smart Part Config can only be run in a Part or Assembly", "File Type Error")
+	' Else
+		If Parameter("MB") = False Then
+			iProperties.Value("Custom", "MakeBuy") = "Buy"
+		'	iProperties.Value("Custom", "OPS") = "" 'removed for e-parts, to allow OPS while remaning a "buy" (publish to method)
+		Else
+			iProperties.Value("Custom", "MakeBuy") = "Make"	
+		End If
+		
+		iProperties.Value("Custom", "OPS") = (Parameter("OP1") & Parameter("OP2") & Parameter("OP3") & Parameter("OP4"))
+		
+		If oDoc.SubType = "{9C464203-9BAE-11D3-8BAD-0060B0CE6BB4}" Then ' Determnine if part is Sheet Metal
+			'Measure part and write to parameters, if sheet metal
+			Parameter("XDIM") = SheetMetal.FlatExtentsLength
+			Parameter("YDIM") = SheetMetal.FlatExtentsWidth
+			Parameter("ZDIM") = Parameter("Thickness")
+		Else
+			'Measure part and write to parameters, if standard
+			Parameter("XDIM") = Measure.ExtentsLength
+			Parameter("YDIM") = Measure.ExtentsWidth
+			Parameter("ZDIM") = Measure.ExtentsHeight
+		End If
+
+		If Len(iProperties.Value("Project", "Part Number")) > 50 Then
+			MessageBox.Show("The entered part number is longer than 50 characters, and will be truncated in Epicor.  Please ensure that the part description in not included in the Part Number field", "Part Number Length",MessageBoxButtons.OK, MessageBoxIcon.Error)
+		End If
+		
+		
+		'Pulls measurements into list and sorts according to size
+		sizes.Add(Parameter("XDIM"))
+		sizes.Add(Parameter("YDIM"))
+		sizes.Add(Parameter("ZDIM"))
+		sizes.Sort()
+
+		'Outputs 2 largest dimensions to strings to lose units, converting the units from the file units to inches
+		LString = String.Format(Round(oUOM.ConvertUnits(sizes(2), oUnitsEnum, 11272), 1))
+		WString = String.Format(Round(oUOM.ConvertUnits(sizes(1), oUnitsEnum, 11272), 1))
+		TString = String.Format(Round(oUOM.ConvertUnits(sizes(0), oUnitsEnum, 11272), 1))
+
+		'Outputs the strings to iProperties
+		iProperties.Value("Custom", "WIDTH") = WString
+		iProperties.Value("Custom", "LENGTH") = LString
+		iProperties.Value("Custom", "THICKNESS") = TString
+
+		'Autofill Vendor Supplied Mtl
+		If Parameter("VendorSupplyMtl") = True Then
+			iProperties.Value("Custom", "Material Number") = "--Vendor Supplied--"
+		End If
+
+		'Auto Fill creation date field with todays date
+		Dim oCreateDate As Date = DateString
+		iProperties.Value("Project", "Creation Date") = oCreateDate
+		
+		oDoc.ComponentDefinition.BOMQuantity.SetBaseQuantity(BOMQuantityTypeEnum.kEachBOMQuantity)
+		
+	'End If
+End Sub
+
+Sub SmartPartPropAdd(oDoc as Document)
+	customPropertySet = ThisDoc.Document.PropertySets.Item("Inventor User Defined Properties")
+	'Check for and Add iProperties that are missing.  
+
+	'Check that the document is a model file
+	If oDoc.DocumentType = DrawingDocumentObject Then
+		MessageBox.Show("Smart Part Config can only be run in a Part or Assembly", "File Type Error")
+	Else If oDoc.DocumentType = PresentationDocumentObject Then	
+		MessageBox.Show("Smart Part Config can only be run in a Part or Assembly", "File Type Error")
+	Else
+		'DXF
+		Try
+			  prop = customPropertySet.Item("DXF")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "DXF")
+			  iProperties.Value("Custom", "DXF") = False
+		End Try
+
+		'STP
+		Try
+			  prop = customPropertySet.Item("STP")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "STP")
+			  iProperties.Value("Custom", "STP") = False
+		End Try
+
+		'Detailer
+		Try
+			  prop = customPropertySet.Item("DETAILER")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "DETAILER")
+		End Try
+
+		'Length
+		Try
+			  prop = customPropertySet.Item("LENGTH")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "LENGTH")
+		End Try
+
+		'Width
+		Try
+			  prop = customPropertySet.Item("WIDTH")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "WIDTH")
+		End Try
+
+		'Make-buy
+		Try
+			  prop = customPropertySet.Item("MakeBuy")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "MakeBuy")
+		End Try
+
+		'Material Number
+		Try
+			  prop = customPropertySet.Item("MATERIAL NUMBER")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "MATERIAL NUMBER")
+		End Try
+
+		'Material Description
+		Try
+			prop = customPropertySet.Item("MATERIAL DESCRIPTION")
+		Catch
+			customPropertySet.Add("", "MATERIAL DESCRIPTION")	
+		End Try
+
+		'Notes
+		Try
+			  prop = customPropertySet.Item("NOTES")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "NOTES")
+		End Try
+
+		'Ops
+		Try
+			  prop = customPropertySet.Item("OPS")
+		Catch
+			  ' Assume error means not found
+			  customPropertySet.Add("", "OPS")
+		End Try
+
+
+
+		'Check for and Add Parameters that are missing///////////////////////////////////////////////////
+		'OP1
+		Try
+			param = Parameter.Param("OP1")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByValue("OP1", "", UnitsTypeEnum.kTextUnits)
+			MultiValue.SetList("OP1", " ", "OP009:Lathe CNC~", "OP010:Mill CNC~", "OP011:Router CNC~", "OP012:Mill Manual~", "OP013:Lathe Manual~", "OP014:Cutting~", "OP015:OS - Milling~", "OP016:Rolling~", "OP017:Bending~", "OP020:Paint~", "OP022:OS - Turning~", "OP023:OS - 2D Laser~", "OP024:OS - Waterjetting~", "OP034:OS - Forming~", "OP035:OS - 3D Laser~", "OP036:OS - TIG Welding~", "OP038:OS - Turnkey Fabrication~", "OP039:OS - Powder Coating~", "OP040:OS – Anodizing~", "OP041:OS - Injection Molding~", "OP060:OS – Misc~", "OP061:Softgoods - Fabrication~", "OP062:Control – Fabrication~", "OP071:OS - 2D Laser & Form~", "OP080:OS – Plating~", "OP086:OS – Polishing~", "OP110:OS - Routing~", "OP139:3D – Printing~", "OP141:OS - Upholstery~", "OP145:Post Processing~", "OP146:Laser Cutting / Etching~")
+		End Try
+
+		'OP2
+		Try
+			param = Parameter.Param("OP2")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByValue("OP2", "", UnitsTypeEnum.kTextUnits)
+			MultiValue.SetList("OP2", " ", "OP009:Lathe CNC~", "OP010:Mill CNC~", "OP011:Router CNC~", "OP012:Mill Manual~", "OP013:Lathe Manual~", "OP014:Cutting~", "OP015:OS - Milling~", "OP016:Rolling~", "OP017:Bending~", "OP020:Paint~", "OP022:OS - Turning~", "OP023:OS - 2D Laser~", "OP024:OS - Waterjetting~", "OP034:OS - Forming~", "OP035:OS - 3D Laser~", "OP036:OS - TIG Welding~", "OP038:OS - Turnkey Fabrication~", "OP039:OS - Powder Coating~", "OP040:OS – Anodizing~", "OP041:OS - Injection Molding~", "OP060:OS – Misc~", "OP061:Softgoods - Fabrication~", "OP062:Control – Fabrication~", "OP071:OS - 2D Laser & Form~", "OP080:OS – Plating~", "OP086:OS – Polishing~", "OP110:OS - Routing~", "OP139:3D – Printing~", "OP141:OS - Upholstery~", "OP145:Post Processing~", "OP146:Laser Cutting / Etching~")
+		End Try
+		
+		'OP3
+		Try
+			param = Parameter.Param("OP3")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByValue("OP3", "", UnitsTypeEnum.kTextUnits)
+			MultiValue.SetList("OP3", " ", "OP009:Lathe CNC~", "OP010:Mill CNC~", "OP011:Router CNC~", "OP012:Mill Manual~", "OP013:Lathe Manual~", "OP014:Cutting~", "OP015:OS - Milling~", "OP016:Rolling~", "OP017:Bending~", "OP020:Paint~", "OP022:OS - Turning~", "OP023:OS - 2D Laser~", "OP024:OS - Waterjetting~", "OP034:OS - Forming~", "OP035:OS - 3D Laser~", "OP036:OS - TIG Welding~", "OP038:OS - Turnkey Fabrication~", "OP039:OS - Powder Coating~", "OP040:OS – Anodizing~", "OP041:OS - Injection Molding~", "OP060:OS – Misc~", "OP061:Softgoods - Fabrication~", "OP062:Control – Fabrication~", "OP071:OS - 2D Laser & Form~", "OP080:OS – Plating~", "OP086:OS – Polishing~", "OP110:OS - Routing~", "OP139:3D – Printing~", "OP141:OS - Upholstery~", "OP145:Post Processing~", "OP146:Laser Cutting / Etching~")
+		End Try
+
+		'OP4
+		Try
+			param = Parameter.Param("OP4")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByValue("OP4", "", UnitsTypeEnum.kTextUnits)
+			MultiValue.SetList("OP4", " ", "OP009:Lathe CNC~", "OP010:Mill CNC~", "OP011:Router CNC~", "OP012:Mill Manual~", "OP013:Lathe Manual~", "OP014:Cutting~", "OP015:OS - Milling~", "OP016:Rolling~", "OP017:Bending~", "OP020:Paint~", "OP022:OS - Turning~", "OP023:OS - 2D Laser~", "OP024:OS - Waterjetting~", "OP034:OS - Forming~", "OP035:OS - 3D Laser~", "OP036:OS - TIG Welding~", "OP038:OS - Turnkey Fabrication~", "OP039:OS - Powder Coating~", "OP040:OS – Anodizing~", "OP041:OS - Injection Molding~", "OP060:OS – Misc~", "OP061:Softgoods - Fabrication~", "OP062:Control – Fabrication~", "OP071:OS - 2D Laser & Form~", "OP080:OS – Plating~", "OP086:OS – Polishing~", "OP110:OS - Routing~", "OP139:3D – Printing~", "OP141:OS - Upholstery~", "OP145:Post Processing~", "OP146:Laser Cutting / Etching~")
+		End Try
+		
+		'XDIM
+		Try
+			param = Parameter.Param("XDIM")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByExpression("XDIM", "0", UnitsTypeEnum.kInchLengthUnits)
+		End Try
+
+		'YDIM
+		Try
+			param = Parameter.Param("YDIM")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByExpression("YDIM", "0", UnitsTypeEnum.kInchLengthUnits)
+		End Try
+
+		'ZDIM
+		Try
+			param = Parameter.Param("ZDIM")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByExpression("ZDIM", "0", UnitsTypeEnum.kInchLengthUnits)
+		End Try
+
+		'MB
+		Try
+			param = Parameter.Param("MB")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByValue("MB", True, "BOOLEAN")
+		End Try
+
+		'VendorSupplyMtl
+		Try
+			param = Parameter.Param("VendorSupplyMtl")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByValue("VendorSupplyMtl", False, "BOOLEAN")
+		End Try
+
+		'Enable Part Number Editing
+		Try
+			param = Parameter.Param("EditPN")
+		Catch
+			oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+			oParameter=oMyParameter.AddByValue("EditPN", False, "BOOLEAN")
+		End Try
+
+	End If
+
+End Sub

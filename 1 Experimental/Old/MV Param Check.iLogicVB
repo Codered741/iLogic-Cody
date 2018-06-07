@@ -1,0 +1,70 @@
+Sub Main()
+	Dim UNVStrParams As New List(of String)
+
+	'UNVStrParams.Add("ProjectNum")
+	'ParamAdd(UNVStrParams, "TXT")
+	
+	Dim MVParam as UserParameters
+	MVParam = ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+	Dim Param as UserParameter = MVParam.Item("OP1")
+	
+	If Param.ExpressionList.Count() > 1 Then
+	
+	
+
+	
+End Sub
+
+
+
+
+
+
+
+
+
+Public Sub ParamAdd(Params As List(Of String), UnitType As String)
+	'Init
+	Dim oPartDoc As Document = ThisApplication.ActiveDocument
+	Dim oCompDef As ComponentDefinition = oPartDoc.ComponentDefinition
+	oMyParameter=oCompDef.Parameters.UserParameters
+	
+	'Main
+	If UnitType = "BOOL" Then	
+		For Each pmtr In Params
+			Try
+				param = Parameter.Param(pmtr)
+			Catch
+				oMyParameter=oCompDef.Parameters.UserParameters
+				oParameter=oMyParameter.AddByValue(pmtr, True, "BOOLEAN")
+			End Try
+		Next 
+	Else If UnitType = "IN" Then
+		For Each pmtr In Params
+			Try
+				param = Parameter.Param(pmtr)
+			Catch
+				oMyParameter=oCompDef.Parameters.UserParameters
+				oParameter=oMyParameter.AddByValue(pmtr, 0 in, UnitsTypeEnum.kInchLengthUnits)
+			End Try
+		Next 
+	Else If UnitType = "TXT"
+		For Each pmtr In Params
+			Try
+				param = Parameter.Param(pmtr)
+			Catch
+				oMyParameter=oCompDef.Parameters.UserParameters
+				oParameter=oMyParameter.AddByValue(pmtr, " ", UnitsTypeEnum.kTextUnits)
+			End Try
+		Next 
+	Else If UnitType = "UL" Then
+		For Each pmtr In Params
+			Try
+				param = Parameter.Param(pmtr)
+			Catch
+				oMyParameter=oCompDef.Parameters.UserParameters
+				oParameter=oMyParameter.AddByValue(pmtr, 0 , UnitsTypeEnum.kUnitlessUnits)
+			End Try
+		Next 
+	End If
+End Sub

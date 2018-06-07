@@ -1,0 +1,13 @@
+﻿
+iLogicVb.UpdateWhenDone = True
+
+Dim Borders(0 To 2) As String
+
+Borders(0) = "TT 11x17 Part Border"
+Borders(1) = "TT 11x17 Title Page Border"
+Borders(2) = "TT 11x17 General Border"
+
+UsrChoice = InputListBox("Select Border", Borders, Borders(0), "Drawing Border", "Select One")
+
+ActiveSheet.Border = UsrChoice
+

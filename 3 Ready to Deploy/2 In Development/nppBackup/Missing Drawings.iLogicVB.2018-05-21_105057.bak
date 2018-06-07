@@ -1,0 +1,143 @@
+﻿'AUTHOR: Cody Redding 
+'CONTACT: Codered741@gmail.com
+'LAST MODIFIED: 20170721
+'STATUS: In Progress
+'LICENSE: Free to redistribute without authorization
+
+'FUNCTION: Create a report of all "Make" parts that are missing drawings
+
+'TO-DO:  Filtering for "Make" parts is currently not working
+
+Sub Main()
+	MissingDrawings()
+End Sub
+
+
+Sub MissingDrawings()
+
+	'check that the active document is an assembly file
+	If ThisApplication.ActiveDocument.DocumentType <> kAssemblyDocumentObject Then
+		MessageBox.Show("Please run this rule from the assembly file.", "iLogic")
+		Exit Sub
+	End If
+
+	'declarations
+	Dim oAsmDoc As AssemblyDocument 'define the active document as an assembly file
+	oAsmDoc = ThisApplication.ActiveDocument
+	
+	Dim oRefDocs As DocumentsEnumerator = oAsmDoc.AllReferencedDocuments 'look at the files referenced by the assembly
+	Dim oRefDoc As Document
+	
+	Dim oFile As String
+	oFile = ThisDoc.PathAndFileName(False) & ".txt"
+	Dim oAppend As System.IO.StreamWriter
+	oAppend = IO.File.AppendText(oFile)
+	
+	Dim bFoundFile As Boolean
+	bFoundFile = False
+
+	'get user input
+	RUsure = MessageBox.Show("This operation will search for drawing files that do NOT exist in your Vault workspace.  " _
+		& vbLf & " Drawings may exist in the Vault, but will not be counted in this operation.  See a Vault Admin for assistance. " _
+		& vbLf & " " _
+		& vbLf & "Are you sure you want to create this report for all of the assembly components?" _
+		& vbLf & "This operation could take some time.", "iLogic  - Batch Output TXT ", MessageBoxButtons.YesNo)
+	
+	If RUsure = vbNo Then
+		Exit Sub
+	End If
+
+	oAppend.WriteLine ("Report created - " & DateString & ":" & TimeString	& " by " & ThisApplication.UserName)
+	oAppend.Flush()
+		
+	'work the the drawing files for the referenced models
+	'this expects that the model has a drawing of the same name
+	For Each oRefDoc In oRefDocs
+		
+		' Dim props as PropertySet
+		props = oRefDoc.PropertySets.Item("Inventor User Defined Properties")
+		
+		'Dim MBProp As Property
+		MBProp = props.Item("MakeBuy")
+		MBProp = iProperties.Value(oRefDoc.FullFileName, "Custom", "MakeBuy")
+		
+		MsgBox(MBProp)
+		
+		If MBProp.Value = "Make" Then '/////////////////////////// THIS IS NOT WORKING///////////////////////////
+			'check to see that the model has a drawing in the project workspace
+			dwgPathName = FindDrawingFile(oRefDoc)
+			
+			If dwgPathName = "" Then 
+				
+				oAppend.WriteLine("MISSING DRAWING FOR : " & oRefDoc.FullDocumentName)
+				bFoundFile = True
+				
+			Else 
+				
+				'oAppend.WriteLine("FOUND : " & dwgPathName & " FOR : " & oRefDoc.FullDocumentName)
+				
+			End If
+		End If
+	Next
+	
+	'- - - - - - - - - - - - -
+	If bFoundFile = True Then
+	
+		oAppend.WriteLine("---End of Report---")
+		oAppend.Flush()
+		oAppend.Close()
+		
+		ThisDoc.Launch (oFile)
+		
+	Else
+	
+		MessageBox.Show("No parts are missing drawings", "Good Job!")
+		oAppend.WriteLine ("Nothing to Report")
+		oAppend.WriteLine("---End of Report---")
+		oAppend.Flush()
+		oAppend.Close()
+		
+	End If
+	
+
+	
+End Sub
+
+Function FindDrawingFile(PartOrAssemblyDoc As Document)
+    Dim fullFilename As String
+    fullFilename = PartOrAssemblyDoc.fullFilename
+   
+    ' Extract the path from the full filename.
+    Dim path As String
+    path = Left$(fullFilename, InStrRev(fullFilename, "\"))
+   
+    ' Extract the filename from the full filename.
+    Dim filename As String
+    filename = Right$(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
+   
+    ' Replace the extension with "dwg"
+    filename = Left$(filename, InStrRev(filename, ".")) & "dwg"
+   
+    ' Find if the drawing exists.
+    Dim drawingFilename As String
+    drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+    ' Check the result.
+    If drawingFilename = "" Then
+        ' Try again with idw extension.
+        filename = Left$(filename, InStrRev(filename, ".")) & "idw"
+       
+        ' Find if the drawing exists.
+        drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+        ' Return the result.
+        If drawingFilename <> "" Then
+            FindDrawingFile = drawingFilename
+        Else
+            FindDrawingFile = ""
+        End If
+    Else
+        ' Return the result.
+        FindDrawingFile = drawingFilename
+    End If
+End Function

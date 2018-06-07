@@ -1,0 +1,76 @@
+Sub Main()
+	Dim oDoc As Document = ThisApplication.ActiveDocument
+	Dim comps As SelectSet = oDoc.SelectSet
+	Dim comp As ComponentOccurrence
+	Dim oCommandMgr As CommandManager = ThisApplication.CommandManager
+	Dim oRefOLE As ReferencedOLEFileDescriptors = oDoc.ReferencedOLEFileDescriptors
+	'If there are selected components we can do something, otherwise we're done
+
+	If comps.count > 0 Then   
+
+	numParts = comps.count
+
+		For Each comp In comps
+			iProperties.Value("Summary", "Comments") = "NOTES: " & vbCrLf & _
+				"  - ASSEMBLE PARTS USING WOOD GLUE AND STAPLES"& vbCrLf & _
+				"  - STAPLE THROUGH STILES INTO RAILS FROM SIDES" & vbCrLf & _
+				"  - STAPLE THROUGH TOP/BOTTOM RAILS INTO STILES FROM TOP/BOTTOM" & vbCrLf & _
+				"  - STAPLE THROUGH TUBE SUPPORT INTO TOP/BOTTOM RAILS" & vbCrLf & _
+				"  - SAND ALL TABS, NO BURRS OR SPLINTERS ALLOWED" & vbCrLf & _
+				"  - APPLY 1/4in ROUNDOVER TO ALL EDGES AFTER ASSEMBLY" & vbCrLf & _
+				"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION" & vbCrLf & _
+				"  - PAINT ACCORDING TO INCLUDED PROCEDURE" & vbCrLf & _
+				"  - ALL MATERIAL IS 12mm (1/2in) FINNISH BIRCH PLYWOOD, UOS" & vbCrLf & _
+				"  - LOCK EXTRUSION IS 1in SQ. STEEL TUBE"
+				
+			oCommandMgr.ControlDefinitions.Item("VaultCheckout").Execute
+			
+			ThisDoc.Launch(FindDrawingFile(comp.Definition.Document))
+			
+		Next
+		
+		MessageBox.Show(numParts & " parts were successfully changed", "Success")
+		
+	Else
+		MessageBox.Show("There are no components selected", "Error")
+	End If
+End Sub
+
+Function FindDrawingFile(PartOrAssemblyDoc As Document)
+    Dim fullFilename As String
+    fullFilename = PartOrAssemblyDoc.fullFilename
+   
+    ' Extract the path from the full filename.
+    Dim path As String
+    path = Left$(fullFilename, InStrRev(fullFilename, "\"))
+   
+    ' Extract the filename from the full filename.
+    Dim filename As String
+    filename = Right$(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
+   
+    ' Replace the extension with "dwg"
+    filename = Left$(filename, InStrRev(filename, ".")) & "dwg"
+   
+    ' Find if the drawing exists.
+    Dim drawingFilename As String
+    drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+    ' Check the result.
+    If drawingFilename = "" Then
+        ' Try again with idw extension.
+        filename = Left$(filename, InStrRev(filename, ".")) & "idw"
+       
+        ' Find if the drawing exists.
+        drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+        ' Return the result.
+        If drawingFilename <> "" Then
+            FindDrawingFile = drawingFilename
+        Else
+            FindDrawingFile = ""
+        End If
+    Else
+        ' Return the result.
+        FindDrawingFile = drawingFilename
+    End If
+End Function

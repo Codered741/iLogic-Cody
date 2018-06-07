@@ -1,0 +1,24 @@
+Sub Main()
+	SetFront	
+End Sub
+
+Public Sub SetFront()	
+	
+	ThisApplication.CommandManager.ControlDefinitions.Item("AppLookAtCmd").Execute2(True)
+	
+	ThisApplication.ActiveView.SetCurrentAsFront
+	
+	Dim oCam As Camera
+	oCam = ThisApplication.ActiveView.Camera
+	
+	oCam.Perspective = False
+	oCam.ViewOrientationType = 10759 'k
+	oCam.Fit()
+	oCam.Apply
+	
+	ThisApplication.ActiveView.SetCurrentAsHome
+	
+	
+
+	
+End Sub

@@ -1,0 +1,71 @@
+'------- Start of iLogic code -------------------
+'Email Part of the Code adapted by Clint Brown @ClintCadline from Curtis Waguespack's blog
+'http://inventortrenches.blogspot.co.uk/2011/04/using-inventor-ilogic-to-create-e-mail.html
+
+'Ensure that this is a part file, exit on other files
+' oDoc = ThisDoc.ModelDocument
+' If oDoc.DocumentType = kPartDocumentObject
+	' OType = 1
+' Else
+	' OType = 0
+' End If
+
+' If OType = 0
+	' MessageBox.Show("Email Code will only run on Part files", "Cadline")
+
+	' Return
+' End If
+
+'Roll up end of Part
+'ThisDoc.Document.ComponentDefinition.SetEndOfPartToTopOrBottom(True)
+
+'Create Email Contents
+
+
+
+
+
+' oOApp = CreateObject("Outlook.Application")
+' oOMail = oOApp.CreateItem(olMailItem)
+' oAdressee = "TTPARTPUBLISH@mailinator.com"
+' 'oFileName = ThisDoc.FileName + "' for review" & vbLf & vbLf & "Kind Regards"
+' oFrom = iProperties.Value("Summary", "Author")
+' 'Create Email & Add Attachments
+
+' With oOMail
+	' .To = "TTPARTPUBLISH@mailinator.com"
+	' .Subject = "TEST" & AAA
+	' .Body = "Hallo"
+	' .attachments.Add ()
+	' .Display
+' End With
+'------- end of iLogic code -------------------
+
+ 
+
+' .attachments.Add ("C:\Users\user\Desktop\Neuer Ordner\Ablehnung der ZAV an Fieger am 29.01.2015.pdf") - here is a example for arrach a single PDF file
+
+Sub SendMail(Optional email as String, Optional subject As String, Optional Body as String, Optional attach1 as String, Optional attach2 as String, Optional attach3 as String)
+	Dim oOApp
+	Dim oOMail
+	Dim olNs
+
+	oOApp = CreateObject("Outlook.Application")
+	oOMail = oOApp.CreateItem(olMailItem)
+	olNs = oOApp.GetNamespace("MAPI")
+	olNs.Logon
+
+	With oOMail
+		.To = email
+		.Subject = subject
+		.Body = Body
+		
+		'Add attachments to the message
+		.attachments.Add (attach1)
+		.attachments.Add (attach2)
+		.attachments.Add (attach3)
+		
+		.Display
+		'.Send 'this causes a security error in outlook, not recommended.  
+	End With
+End Sub

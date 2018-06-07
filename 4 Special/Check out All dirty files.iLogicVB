@@ -1,0 +1,17 @@
+﻿Dim odoc As Document
+
+Dim invdoc As Document
+
+Dim oCommandMgr As CommandManager = ThisApplication.CommandManager
+
+odoc = ThisApplication.ActiveDocument
+
+ 
+
+For Each invdoc In odoc.AllReferencedDocuments
+        If invdoc.Dirty = True Then
+                 
+            oCommandMgr.ControlDefinitions.Item("VaultCheckoutTop​").Execute
+           
+        End If
+    Next

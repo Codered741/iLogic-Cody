@@ -1,0 +1,104 @@
+Sub Main()
+    Dim oSheetMetalDoc As PartDocument
+    oSheetMetalDoc = ThisApplication.ActiveEditDocument
+    
+    Dim oCompDef As SheetMetalComponentDefinition
+    oCompDef = oSheetMetalDoc.ComponentDefinition
+    
+    Dim oSheetMetalFeatures As SheetMetalFeatures
+    oSheetMetalFeatures = oCompDef.Features
+    
+    Dim oThickness As Double
+    oThickness = 0
+    
+    On Error Resume Next
+        oThickness = oCompDef.Parameters("Thickness").Value
+        If oThickness = 0 Then
+            MsgBox ("Thickness not found in Params!" & vbLf & vbLf & "Please manually enter!")
+            oThickness = InputBox("Enter plate thickness in mm" & vbLf & vbLf & "[This will be used to calculate dogbone diam]", "iLogic", "0.5")
+        End If
+    On Error GoTo 0
+    
+    If oThickness = 0 Then
+        Exit Sub
+    End If
+    
+    oDogBoneDiamPercentOfThickness = 1.125
+    oFilletPercentOfDiam = 0.25
+    
+    oDiam = oDogBoneDiamPercentOfThickness * oThickness
+    oFilletSize = oFilletPerCentOfDiam & "*" & oDiam
+    
+    Dim oFace As Face
+    
+    Do
+        oFace = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFaceFilter, "Select the top FACE")
+    Loop While oFace Is Nothing
+    
+    Dim oRoughDogBoneSketch As Sketch
+    oRoughDogBoneSketch = oCompDef.Sketches.Add(oFace, False)
+    
+    Dim oEdge As Edge
+    Dim oEdgeLoop As EdgeLoop
+    
+    Dim oSketchPointCollection As ObjectCollection
+    oSketchPointCollection = ThisApplication.TransientObjects.CreateObjectCollection
+    
+  On Error Resume Next
+    For Each oEdgeLoop In oFace.EdgeLoops
+        If oEdgeLoop.IsOuterEdgeLoop = False Then
+            For Each oEdge In oEdgeLoop.Edges
+                oHole1 = Nothing
+                oHole2 = Nothing
+                
+                oHole1 = oRoughDogBoneSketch.AddByProjectingEntity(oEdge.StartVertex)
+                oHole2 = oRoughDogBoneSketch.AddByProjectingEntity(oEdge.StopVertex)
+                
+                If Not oHole1 Is Nothing Then
+                    oSketchPointCollection.Add(oHole1)
+                End If
+                
+                If Not oHole2 Is Nothing Then
+                    oSketchPointCollection.Add(oHole2)
+                End If
+            Next
+        End If
+    Next
+  On Error GoTo 0
+
+    Dim oSketchPlacementDefinition As SketchHolePlacementDefinition
+    oSketchPlacementDefinition = oCompDef.Features.HoleFeatures.CreateSketchPlacementDefinition(oSketchPointCollection)
+
+    Call oCompDef.Features.HoleFeatures.AddDrilledByThroughAllExtent(oSketchPlacementDefinition, oDiam, kPositiveExtentDirection)
+    
+ 'AddFillets
+    
+    Dim oCircleEdges As EdgeCollection
+    oCircleEdges = ThisApplication.TransientObjects.CreateEdgeCollection
+    
+    Dim oCircFace As Face
+    Dim oCircEdge As Edge
+    
+  On Error Resume Next
+    For Each oEdgeLoop In oFace.EdgeLoops
+        If oEdgeLoop.IsOuterEdgeLoop = False Then
+            For Each oEdge In oEdgeLoop.Edges
+                If oEdge.GeometryType = kCircularArcCurve Then
+                    For Each oCircFace In oEdge.Faces
+                        If oCircFace.SurfaceType = kCylinderSurface Then
+                            For Each oCircEdge In oCircFace.Edges
+                                If oCircEdge.CurveType <> kCircleCurve Then
+                                    oCircleEdges.Add(oCircEdge)
+                                End If
+                            Next
+                        End If
+                    Next
+                End If
+            Next
+        End If
+    Next
+  On Error GoTo 0
+
+    Call oCompDef.Features.FilletFeatures.AddSimple(oCircleEdges, oFilletSize)
+    
+End Sub

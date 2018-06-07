@@ -1,0 +1,267 @@
+﻿Sub Main()
+
+    Dim oDoc As PartDocument
+    oDoc = ThisApplication.ActiveDocument
+    
+    If oDoc Is Nothing Then
+        MsgBox "No part document!" & vbCrLf & "Please open a part with solids in it for this sample to run.", vbCritical, "Autodesk Inventor"
+        Exit Sub
+    End If
+    
+    Dim oCompDef As PartComponentDefinition
+    oCompDef = oDoc.ComponentDefinition
+    
+    If oCompDef.SurfaceBodies.Count = 0 Then
+        MsgBox "No solids to move!" & vbCrLf & "Please open a part with solids in it for this sample to run.", vbCritical, "Autodesk Inventor"
+        Exit Sub
+    End If
+    
+    Dim oBodies As ObjectCollection
+    oBodies = ThisApplication.TransientObjects.CreateObjectCollection
+    
+    ' Specify a body to move.
+    oBodies.Add oCompDef.SurfaceBodies(1)
+    
+    Call RotatePart(oCompDef, oBodies)
+    
+    oBodies.Clear
+    oBodies.Add oCompDef.SurfaceBodies(1)
+    Call MovePart(oCompDef, oBodies)
+   
+End Sub
+
+
+    Sub RotatePart(ByVal oCompDef As ComponentDefinition, ByVal oBodies As ObjectCollection)
+        'http://adndevblog.typepad.com/manufacturing/2012/08/what-is-the-best-way-to-compute-a-normal-of-a-face-in-inventor-api.html
+        ' Create a MoveFeatureDefinition.
+        Dim oMoveDef As MoveDefinition
+        oMoveDef = oCompDef.Features.MoveFeatures.CreateMoveDefinition(oBodies)
+        
+        Dim Face1 As Face
+        Dim Face2 As Face
+    
+        Dim boolFace1IsPlane As Boolean
+        boolFace1IsPlane = False
+        
+        Do
+           Face1 = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFaceFilter, "Pick FACE to align with XY Plane (FRONT)")
+           If (TypeOf Face1.Geometry Is Plane) Then
+               boolFace1IsPlane = True
+           End If
+        Loop Until boolFace1IsPlane
+    
+        Dim oFace1Normal As Vector
+        oFace1Normal = ThisApplication.TransientGeometry.CreateVector()
+        oFace1Normal = GetFaceNormal(Face1)
+    
+        Dim boolFace2IsPlane As Boolean
+        boolFace2IsPlane = False
+        Dim boolPlanesat90 As Boolean
+        boolPlanesat90 = False
+        
+        Dim oFace2Normal As Vector
+        oFace2Normal = ThisApplication.TransientGeometry.CreateVector()
+    
+        Do
+            boolFace2IsPlane = False
+            Do
+               Face2 = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFaceFilter, "Pick FACE to align with XZ Plane (TOP)")
+               If (TypeOf Face2.Geometry Is Plane) Then
+                   boolFace1IsPlane = True
+               End If
+            Loop Until boolFace1IsPlane
+    
+            oFace2Normal = GetFaceNormal(Face2)
+    
+            'Perpindicular vectors have dot product of zero.
+            'Need to handle round of errors in doing the large vectors maths
+            If VBA.Round(oFace1Normal.DotProduct(oFace2Normal), 8) = 0 Then
+                boolPlanesat90 = True
+            End If
+    
+        Loop Until boolPlanesat90
+    
+        Dim oYZPlane As WorkPlane
+        Dim oXZPlane As WorkPlane
+        Dim oXYPlane As WorkPlane
+        oYZPlane = oCompDef.WorkPlanes.Item(1)
+        oXZPlane = oCompDef.WorkPlanes.Item(2)
+        oXYPlane = oCompDef.WorkPlanes.Item(3)
+        
+        Dim oXAxis As WorkAxis
+        oXAxis = oCompDef.WorkAxes(1)
+        Dim oYAxis As WorkAxis
+        oYAxis = oCompDef.WorkAxes(2)
+        Dim oZAxis As WorkAxis
+        oZAxis = oCompDef.WorkAxes(3)
+        
+       'Perform first rotation to align with coord system
+       Dim oRotationAngle As Double
+       oRotationAngle = GetRotationAngleAboutAxisToPlane(oFace1Normal, oXAxis, oXYPlane)
+        'oRotationAngle = GetRotationAngleAboutAxisToPlane(ThisApplication.TransientGeometry.CreateVector(oFace1Normal.X, oFace1Normal.Y, oFace1Normal.Z), oXAxis, oXYPlane)
+        
+        Dim oRotateAboutAxis As RotateAboutLineMoveOperation
+        oRotateAboutAxis = oMoveDef.AddRotateAboutAxis(oXAxis, True, oRotationAngle)
+        
+            Dim oRes1Vector As Vector
+            oRes1Vector = ThisApplication.TransientGeometry.CreateVector()
+            oRes1Vector = RotateVectorAboutAnotherVector(oRotationAngle, oFace1Normal, ThisApplication.TransientGeometry.CreateVector(oXAxis.Line.Direction.X, oXAxis.Line.Direction.Y, oXAxis.Line.Direction.Z))
+            
+            Dim oRes1UpVector As Vector
+            oRes1UpVector = ThisApplication.TransientGeometry.CreateVector()
+            oRes1UpVector = RotateVectorAboutAnotherVector(oRotationAngle, oFace2Normal, ThisApplication.TransientGeometry.CreateVector(oXAxis.Line.Direction.X, oXAxis.Line.Direction.Y, oXAxis.Line.Direction.Z))
+        
+       'Perform 2nd rotation to align with coord system
+        'oRotationAngle = GetRotationAngleAboutAxisToPlane(oFace1Normal, oYAxis, oXYPlane)
+        oRotationAngle = GetRotationAngleAboutAxisToPlane(oRes1Vector, oYAxis, oXYPlane)
+        oRotateAboutAxis = oMoveDef.AddRotateAboutAxis(oYAxis, True, oRotationAngle)
+            
+            Dim oRes2UpVector As Vector
+            oRes2UpVector = ThisApplication.TransientGeometry.CreateVector()
+            oRes2UpVector = RotateVectorAboutAnotherVector(oRotationAngle, oRes1UpVector, ThisApplication.TransientGeometry.CreateVector(oYAxis.Line.Direction.X, oYAxis.Line.Direction.Y, oYAxis.Line.Direction.Z))
+       'Perform 3rd rotation to get Upvector oriented properly.
+        oRotationAngle = GetRotationAngleAboutAxisToPlane(oRes2UpVector, oZAxis, oXZPlane)
+        oRotateAboutAxis = oMoveDef.AddRotateAboutAxis(oZAxis, True, oRotationAngle)
+        
+        Dim oMoveFeature As MoveFeature
+        oMoveFeature = oCompDef.Features.MoveFeatures.Add(oMoveDef)
+    End Sub
+
+        Function GetFaceNormal(ByVal oFace As Object) As Vector
+            Dim oNormal As Vector
+            Dim Params(1 To 2) As Double
+            Dim Normals(1 To 3) As Double
+    
+            Params(1) = 0
+            Params(2) = 0
+            If TypeOf oFace Is WorkPlane Then
+                Call oFace.Plane.Evaluator.GetNormal(Params, Normals)
+                oNormal = ThisApplication.TransientGeometry.CreateVector(Normals(1), Normals(2), Normals(3))
+            Else
+                If (TypeOf oFace.Geometry Is Plane) Then
+                    'Dim oEvalFace As Face
+                    'oEvalFace = oFace
+                    Call oFace.Evaluator.GetNormal(Params, Normals)
+                    oNormal = ThisApplication.TransientGeometry.CreateVector(Normals(1), Normals(2), Normals(3))
+                End If
+            End If
+            GetFaceNormal = oNormal
+        End Function
+
+        Function GetRotationAngleAboutAxisToPlane(ByVal oVector As Vector, ByVal oAxis As WorkAxis, ByVal oWorkPlane As WorkPlane) As Double
+                ''http://onlinemschool.com/math/library/vector/angl/
+                'This ProjectVectorToPlane removes the 1 of the 3 components in relation to the plane.
+                'IN this case, to the YZ plane, it essentially removes the X component and scales it slightly.
+                
+                'Verified method below also works, but gives same results as the formulaic method.
+                'Dim AltProject As Vector
+                'AltProject = ThisApplication.TransientGeometry.CreateVector(0, oFace1Normal.Y, oFace1Normal.Z)
+                
+                'Angle is insufficient as it doesn't have a direction.
+                'Use Cross product to find the angle and direction
+                ' Length of this crossproduct is actually the area of the parallellogram of A & B
+                ' The vector gives the direction
+                'If the vectors x component is positive, it means that we need to rotate
+                'it the same direction as the x axis (ie cw), and if its negative, we rotate it the negative direction
+                
+                Dim oLineDir As Variant
+                oLineDir = oAxis.Line.Direction
+                'oLine.Direction (oCoords)
+                Dim oAxisVector As Vector
+                oAxisVector = ThisApplication.TransientGeometry.CreateVector(oLineDir.X, oLineDir.Y, oLineDir.Z)
+                
+                'oRotationAngle = AltProject.AngleTo(oYVector)
+                Dim oProjVec As Vector
+                oProjVec = ThisApplication.TransientGeometry.CreateVector()
+                
+                'Project to plane perpindicular to plane
+                oProjVec = ProjectVectorToPerpindicularPlaneOfAnAxis(oVector, oAxisVector)
+                
+                'Get the
+                Dim oWorkPlaneNormal As Vector
+                oWorkPlaneNormal = ThisApplication.TransientGeometry.CreateVector()
+                oWorkPlaneNormal = GetFaceNormal(oWorkPlane)
+            
+                Dim oCrossProductVector As Vector
+                oCrossProductVector = ThisApplication.TransientGeometry.CreateVector
+                oCrossProductVector = oWorkPlaneNormal.CrossProduct(oProjVec)
+            
+                oAngle = ArcSin(oCrossProductVector.Length / (oWorkPlaneNormal.Length * oProjVec.Length))
+                
+                rotdir = 1
+                If oAxisVector.DotProduct(oCrossProductVector) > 0 Then
+                    rotdir = -1
+                End If
+                
+                GetRotationAngleAboutAxisToPlane = rotdir * oAngle
+        End Function
+
+            Function ProjectVectorToPerpindicularPlaneOfAnAxis(ByVal oVector As Vector, ByVal oPlaneNormal As Vector) As Vector
+        
+                'https://www.maplesoft.com/support/help/maple/view.aspx?path=MathApps%2FProjectionOfVectorOntoPlane
+                'Projected vector = orig vector(term1) - (dp(u*N)/mag(n)^2)*n
+        
+                Dim oByValVector As Vector
+                oByValVector = ThisApplication.TransientGeometry.CreateVector(oVector.X, oVector.Y, oVector.Z)
+                
+                Dim oByValPlaneNormal As Vector
+                oByValPlaneNormal = ThisApplication.TransientGeometry.CreateVector(oPlaneNormal.X, oPlaneNormal.Y, oPlaneNormal.Z)
+            
+                Dim oDotproductxun As Double
+                oDotproductxun = oByValVector.DotProduct(oByValPlaneNormal)
+                
+                If oDotproductxun <> 0 Then
+                    Dim magxn As Double
+                    oMagxn = oByValPlaneNormal.Length
+            
+                    Dim oScalarComponent As Double
+                    oScalarComponent = (oDotproductxun) / (oMagxn * oMagxn)
+            
+                    Call oByValPlaneNormal.ScaleBy(oScalarComponent)
+                    Call oByValVector.SubtractVector(oByValPlaneNormal)
+                End If
+                
+                ProjectVectorToPerpindicularPlaneOfAnAxis = oByValVector
+            End Function
+
+            Function ArcSin(ByVal X As Double) As Double
+                'http://cuinl.tripod.com/Tips/math9.htm
+                ArcSin = Atn(X / Sqr(-X * X + 1))
+            End Function
+
+
+    Function RotateVectorAboutAnotherVector(ByVal oTheta As Double, ByVal oRotatingVector As Vector, ByVal oStationaryVector As Vector) As Vector
+        'Let A be the rotating vector
+        'Let B be the stationary vector
+        Dim oVectorA As Vector
+        Dim oVectorB As Vector
+        oVectorA = ThisApplication.TransientGeometry.CreateVector(oRotatingVector.X, oRotatingVector.Y, oRotatingVector.Z)
+        oVectorB = ThisApplication.TransientGeometry.CreateVector(oStationaryVector.X, oStationaryVector.Y, oStationaryVector.Z)
+    
+        Dim oMatrix As Matrix
+        oMatrix = ThisApplication.TransientGeometry.CreateMatrix
+        
+        Call oMatrix.SetToRotation(oTheta, oVectorB, ThisApplication.TransientGeometry.CreatePoint(0, 0, 0))
+
+        Call oVectorA.TransformBy(oMatrix)
+        
+        RotateVectorAboutAnotherVector = oVectorA
+    End Function
+
+Sub MovePart(ByVal oCompDef As ComponentDefinition, ByVal oBodies As ObjectCollection)
+    Dim oMoveDef As MoveDefinition
+    oMoveDef = oCompDef.Features.MoveFeatures.CreateMoveDefinition(oBodies)
+    
+    oRangeBox = oBodies.Item(1).RangeBox
+    
+    oMidX = (oRangeBox.MaxPoint.X + oRangeBox.MinPoint.X) / 2
+    oMidY = (oRangeBox.MaxPoint.Y + oRangeBox.MinPoint.Y) / 2
+    oMidZ = (oRangeBox.MaxPoint.Z + oRangeBox.MinPoint.Z) / 2
+
+
+    Dim oFreeDrag As FreeDragMoveOperation
+    oFreeDrag = oMoveDef.AddFreeDrag(-1 * oMidX, -1 * oMidY, -1 * oMidZ)
+
+    Dim oMoveFeature As MoveFeature
+    oMoveFeature = oCompDef.Features.MoveFeatures.Add(oMoveDef)
+End Sub

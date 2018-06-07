@@ -1,0 +1,36 @@
+Dim oDoc as Document = ThisApplication.ActiveDocument
+Dim oAsmDoc As AssemblyDocument = ThisApplication.ActiveDocument
+Dim oAsmDef As AssemblyComponentDefinition = oAsmDoc.ComponentDefinition
+Dim dViewRepMgr As RepresentationsManager = oAsmDef.RepresentationsManager
+Dim dViewReps As DesignViewRepresentations = dViewRepMgr.DesignViewRepresentations
+Dim dViewRep As DesignViewRepresentation = dViewReps.Item(1) 'assume that the first view rep is the master
+'Dim vRepName as String = "Pretty Colors" 'name for the new view rep
+'Dim dPCViewRep As DesignViewRepresentation = dViewReps.Item(vRepName)
+Dim oOccs as ComponentOccurrencesEnumerator
+
+Dim oCollect as ObjectCollection
+Dim Doc as Document = ThisApplication.Documents.ItemByName("C:\_vaultWIP\designs\188499.iam")
+
+Dim RefDocs as ComponentOccurrencesEnumerator = oAsmDef.Occurrences.AllReferencedOccurrences(Doc)
+
+For i = 1 To 31
+	CurView = dViewReps.Item(i)
+	CurView.Activate()
+	
+	If Curview.Locked = True
+		CurView.Locked = False
+		wasLocked = True
+	End If
+	
+	For Each ref in RefDocs
+		If ref.type = ObjectTypeEnum.kComponentOccurrenceObject Then
+			ref.Visible = False
+		End If
+	Next
+	
+	If wasLocked = True	Then
+		CurView.Locked = True
+		wasLocked = False
+	End If
+	
+Next

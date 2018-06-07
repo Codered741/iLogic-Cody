@@ -1,0 +1,47 @@
+Dim oDoc as Document = ThisApplication.ActiveDocument
+Dim oRefDocs As DocumentsEnumerator = oDoc.AllReferencedDocuments
+
+Dim oRefDoc As Document = oRefDocs.Item(1)
+'MsgBox(oRefDoc.FullDocumentName)
+
+customPropertySet = oRefDoc.PropertySets.Item("Inventor User Defined Properties")
+
+oProp = customPropertySet.Item("DXF")
+
+Try
+	oProp.Value = True
+Catch
+	customPropertySet.Add("Custom", "DXF")
+	oProp.Value = True
+End Try
+
+
+
+' Dim oDwgViews as DrawingViews = oDoc.DrawingViews
+' Dim view1 As DrawingView = oDwgViews.Item(1)
+' MsgBox(view1.Name)
+
+
+' If oDoc.Type = kDrawingDocumentObject AndAlso oRefDocs.Count = 1 Then
+	' For Each refDoc in oRefDocs
+		' customPropertySet = refDoc.Document.PropertySets.Item("Inventor User Defined Properties")
+		' customPropertySet.Item("DXF") = True
+		' If ErrNumber <> 0 Then
+			' customPropertySet.Add("Custom", "DXF")
+			' customPropertySet.Item("DXF") = True
+		' End If
+		
+	' Next
+' Else If oDoc.Type <> kDrawingDocumentObject
+	' Msgbox("This rule can only be run from a drawing document.  ")
+' Else If oRefDocs.Count > 1 AndAlso oDoc.Type = kDrawingDocumentObject
+	' MsgBox("This rule can only be run in drawings that have a single reference.  ")
+' Else If oRefDocs.Count < 1 AndAlso oDoc.Type = kDrawingDocumentObject
+	' MsgBox("This drawing does not have any references.  ")
+' End If
+
+
+'https://forums.autodesk.com/t5/inventor-customization/ilogic-modify-iproperties-of-a-model-that-is-associated-to-the/td-p/4327039
+' modelName = IO.Path.GetFileName(ActiveSheet.View("VIEW1").ModelDocument.FullFileName)
+' iProperties.Value(modelName, "Summary", "Title") = "Test"
+' iLogicVb.UpdateWhenDone = True

@@ -1,0 +1,59 @@
+'declarations
+	Dim oAsmDoc as Document
+	Dim compOcc as ComponentOccurrence
+	customPropertySet = ThisDoc.Document.PropertySets.Item("Inventor User Defined Properties")
+	
+'Main
+	oAsmDoc = ThisApplication.ActiveDocument
+	
+	If oAsmDoc.FileSaveCounter >= 1 Then
+		' Are we in a Assembly or Part Document?
+		If oAsmDoc.DocumentType = kAssemblyDocumentObject Or oAsmDoc.DocumentType = kPartDocumentObject Then
+		
+			oPath = ThisDoc.Path
+			'oFileName = ThisDoc.FileName(False) 'without extension
+			'oRevNum = iProperties.Value("Project", "Revision Number")
+			oSTLAddIn = ThisApplication.ApplicationAddIns.ItemById _
+			("{81CA7D27-2DBE-4058-8188-9136F85FC859}")
+			oDocument = ThisApplication.ActiveDocument
+			oContext = ThisApplication.TransientObjects.CreateTranslationContext
+			oContext.Type = IOMechanismEnum.kFileBrowseIOMechanism
+			oOptions = ThisApplication.TransientObjects.CreateNameValueMap
+			oDataMedium = ThisApplication.TransientObjects.CreateDataMedium
+
+			If oSTLAddIn.HasSaveCopyAsOptions(oDataMedium, oContext, oOptions) Then
+				oOptions.Value("ExportUnits") = 5 
+					'INCH = 2
+					'FOOT = 3
+					'CENTIMETER = 4
+					'MILLIMETER = 5
+					'METER = 6
+					'MICRON = 7
+				oOptions.Value("Resolution") = 0
+					'HIGH = 0
+					'MEDIUM = 1
+					'LOW = 2
+					'CUSTOM = 3 
+					'BREP = 4
+				oOptions.Value("ExportFileStructure") = 0
+					'ONE FILE = 0
+					'ONE FILE PER PART INSTANCE = 1 
+			End If
+			
+			oDataMedium.FileName = oPath & "\" & iProperties.Value("Project", "Part Number") & ".stl"
+
+			'Publish document
+			oSTLAddIn.SaveCopyAs(oDocument, oContext, oOptions, oDataMedium)
+			
+
+		Else
+		
+			MessageBox.Show("This command can only be used in an Assembly or Part.")
+			
+		End If
+	Else
+	
+		MessageBox.Show("File must be saved to continue.", "File Not Saved",MessageBoxButtons.OK,MessageBoxIcon.Error)
+
+	End If
+

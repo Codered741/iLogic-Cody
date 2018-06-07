@@ -1,0 +1,42 @@
+﻿Dim oAsmDoc as Document = ThisApplication.ActiveDocument
+If oAsmDoc.DocumentType = kDrawingDocumentObject Then
+
+	Dim MyArrayList As New ArrayList
+	'MyArrayList.add("STP")
+	MyArrayList.add("DXF")
+	oCustomPropertySet = ThisDoc.Document.PropertySets.Item("Inventor User Defined Properties")
+	'look at each property in the collection
+	For Each oCustProp In oCustomPropertySet
+	'check property name against the list you want to delete
+	If MyArrayList.Contains(oCustProp.Name)Then
+	'delete the custom iProperty
+	oCustProp.Delete
+	
+	End If
+	Next
+	
+	''STP
+	'Try
+'		prop = oCustomPropertySet.Item("STP")
+'	Catch
+'		' Assume error means not found
+'		oCustomPropertySet.Add("", "STP")
+'		iProperties.Value("Custom", "STP") = False
+'	End Try
+	
+	'dxf
+	Try
+		prop = oCustomPropertySet.Item("DXF")
+	Catch
+		' Assume error means not found
+		oCustomPropertySet.Add("", "DXF")
+		iProperties.Value("Custom", "DXF") = False
+	End Try
+	
+Else
+	MessageBox.Show("This command can only be run from a Drawing File", "File Type",MessageBoxButtons.OK,MessageBoxIcon.Error)
+End If
+
+
+	
+	

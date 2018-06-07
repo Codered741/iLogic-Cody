@@ -1,0 +1,94 @@
+﻿Sub Main()
+	'Declarations
+	Dim oDoc As Document = ThisApplication.ActiveEditDocument
+	Dim VOIDMtls As New List(Of String)
+	
+	VOIDMtls.Add("6mm (1/4in) FINNISH BIRCH PLYWOOD")
+	VOIDMtls.Add("12mm (1/2in) FINNISH BIRCH PLYWOOD")
+	VOIDMtls.Add("24mm (1in) FINNISH BIRCH PLYWOOD")
+	
+	'Autofill
+	iLogicVb.RunExternalRule("Smart Part Property Add")
+	iProperties.Value("Custom", "DETAILER") = "Cody Redding"
+	iProperties.Value("Project", "Designer") = "Cody Redding"
+
+	If iProperties.Value("Project", "Revision Number") = "N/A" OrElse iProperties.Value("Project", "Revision Number") = "N\A"
+		iProperties.Value("Project", "Revision Number") = "0"
+	End If
+
+	Parameter("MB") = True
+
+	'Add a select case for the projects you are working on.  pull the list from an excel document.  
+	'promt to select from initial list, then import a new list based on that selection.  The selection should be the sheet name containing the options for that job. 
+
+	'VOID Specifit
+	If isPrt(oDoc) Then
+		iProperties.Material= "Plywood, Finish"
+		MtlChoice = InputListBox("Select Material", VOIDMtls, VOIDMtls(0), "Part Material", "Select One")
+		iProperties.Value("Custom", "MATERIAL DESCRIPTION") = MtlChoice
+	End If
+	
+	If isAsm(oDoc) Then
+		iProperties.Value("Custom", "MATERIAL DESCRIPTION") = "ASSEMBLY"
+	End If
+	
+	iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
+	iProperties.Value("Status", "Checked By") = "Shannon Nickerson"
+
+	addOPParam = InputRadioBox("Add OS Turnkey OP?", "Yes", "No", addOPParam, Title := "Inventor Rules!")
+
+	If addOPParam Then
+		Parameter("OP1") = "OP038:OS - Turnkey Fabrication~"
+		Parameter("VendorSupplyMtl") = True
+	End If
+
+	addNotes = InputRadioBox("Add Texture Note?", "Yes", "No", addNotes, Title := "Inventor Rules!")
+
+	If addNotes  = True Then
+		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION" & vbCrLf & _
+					"  - APPLY TEXTURE ACCORDING TO INCLUDED PROCEDURE"
+	Else
+		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION"
+	End If
+
+	'\VOID
+
+
+	'Finish Config and 
+	iLogicVb.RunExternalRule("Smart Part Config")
+	iLogicForm.ShowGlobal("Smart Part Config")
+End Sub
+
+Function isPrt(ThisDoc As Document) As Boolean
+
+	Debug.Print (ThisDoc.DocumentType)
+
+	If ThisDoc.DocumentType = kPartDocumentObject Then
+
+		isPrt = True
+		
+	Else
+
+		isPrt = False
+		
+	End If
+
+End Function
+
+Function isAsm(ThisDoc As Document) As Boolean
+
+	Debug.Print (ThisDoc.DocumentType)
+
+	If ThisDoc.DocumentType = kAssemblyDocumentObject Then
+
+		isAsm = True
+		
+	Else
+
+		isAsm = False
+		
+	End If
+
+End Function

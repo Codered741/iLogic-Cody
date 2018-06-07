@@ -1,0 +1,191 @@
+﻿Sub Main()
+	'Declarations
+	Dim oDoc As Document = ThisApplication.ActiveEditDocument
+	
+	Dim VOIDMtls As New List(Of String)
+	
+	VOIDMtls.Add("6mm (1/4in) FINNISH BIRCH PLYWOOD")
+	VOIDMtls.Add("12mm (1/2in) FINNISH BIRCH PLYWOOD")
+	VOIDMtls.Add("24mm (1in) FINNISH BIRCH PLYWOOD")
+	VOIDMtls.Add("6mm (1/4in) and 12mm (1/2in) FINNISH BIRCH PLYWOOD")
+	VOIDMtls.Add("12mm (1/2in) FINNISH BIRCH PLYWOOD AND STEEL TUBE")
+	VOIDMtls.Add("24mm (1in) FINNISH BIRCH PLYWOOD AND 4mm BLACK RUBBER")
+	VOIDMtls.Add("14GA ASTM A1011 Steel")
+	
+	iLogicVB.RunExternalRule("Smart Part Property Add")
+	
+	'Autofill
+	iLogicVb.RunExternalRule("Smart Part Property Add")
+	iProperties.Value("Custom", "DETAILER") = "Cody Redding"
+	iProperties.Value("Project", "Designer") = "Cody Redding"
+
+	If iProperties.Value("Project", "Revision Number") = "N/A" OrElse iProperties.Value("Project", "Revision Number") = "N\A"
+		iProperties.Value("Project", "Revision Number") = "0"
+	End If
+
+	Parameter("MB") = True
+
+	'Add a select case for the projects you are working on.  pull the list from an excel document.  
+	'promt to select from initial list, then import a new list based on that selection.  The selection should be the sheet name containing the options for that job. 
+
+	'VOID Specific
+	If isPrt(oDoc) Then
+		
+		MtlChoice = InputListBox("Select Material", VOIDMtls, VOIDMtls(0), "Part Material", "Select One")
+		iProperties.Value("Custom", "MATERIAL DESCRIPTION") = MtlChoice
+		
+		
+		If MtlChoice.Contains("Plywood") Then
+			iProperties.Material= "Plywood, Finish"
+			iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
+		Else If MtlChoice.Contains("Steel")
+			iProperties.Material = "Steel, Mild"
+			iProperties.PartColor = "Powdercoat Iron Grey (RAL 7011)"
+		End If
+		
+	End If
+	
+	If isAsm(oDoc) Then
+		iProperties.Value("Custom", "MATERIAL DESCRIPTION") = "ASSEMBLY"
+	End If
+	
+	
+	iProperties.Value("Status", "Checked By") = "Shannon Nickerson"
+	Parameter("VendorSupplyMtl") = True
+	
+	If iProperties.Value("Project", "Description") = "" OrElse iProperties.Value("Project", "Description") = "Standard Assembly File (in)" Then
+		Desc = InputBox("Enter Part Description", "iLogic")
+		iProperties.Value("Project", "Description") = "VOID V3 " & Desc
+	End If
+	
+	addOPParam = InputRadioBox("Add OS Turnkey OP?", "Yes", "No", addOPParam, Title := "Inventor Rules!")
+
+	If addOPParam Then
+		Parameter("OP1") = "OP038:OS - Turnkey Fabrication~"
+	End If
+
+	Dim NoteOptions(0 to 9) As String
+	
+	NoteOptions(0) = "Texture"
+	NoteOptions(1) = "No Texture"
+	NoteOptions(2) = "Flat w/ Texture"
+	NoteOptions(3) = "Deck Parts"
+	NoteOptions(4) = "Column"
+	NoteOptions(5) = "Wall Panel"
+	NoteOptions(6) = "Wall Assembly"
+	NoteOptions(7) = "Mounting Panel"
+	NoteOptions(8) = "None"
+	NoteOptions(9) = "Jig"
+	
+	addNotes = InputListBox("Select Note Type", NoteOptions, NoteOptions(1), "Note Types", "Select One")
+
+	If addNotes  = "Texture" Then
+		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION" & vbCrLf & _
+					"  - APPLY TEXTURE ACCORDING TO INCLUDED PROCEDURE"
+	Else If addNotes = "No Texture"
+		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION"
+	Else If addNotes = "Flat w/ Texture"
+		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - ASSEMBLE PARTS USING WOOD GLUE AND STAPLES" & vbCrLf & _
+					"  - STAPLE THROUGH STILES INTO RAILS FROM SIDES" & vbCrLf & _
+					"  - STAPLE THROUGH TOP/BOTTOM RAILS INTO STILES FROM TOP/BOTTOM" & vbCrLf & _
+					"  - STAPLE THROUGH TUBE SUPPORT INTO TOP/BOTTOM RAILS" & vbCrLf & _
+					"  - SAND ALL TABS, NO BURRS OR SPLINTERS ALLOWED" & vbCrLf & _
+					"  - APPLY 1/4in ROUNDOVER TO ALL EDGES AFTER ASSEMBLY" & vbCrLf & _
+					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION" & vbCrLf & _
+					"  - PAINT ACCORDING TO INCLUDED PROCEDURE" & vbCrLf & _
+					"  - ALL MATERIAL IS 12mm (1/2in) FINNISH BIRCH PLYWOOD, UOS" & vbCrLf & _
+					"  - LOCK EXTRUSION IS 1in SQ. STEEL TUBE"
+	Else If addNotes = "Deck Parts"
+				iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION" & vbCrLf & _
+					"  - PAINT ALL TOP AND VERTICAL SURFACES BLACK, AFTER RUBBER IS APPLIED"
+	Else If addNotes = "Column"
+				iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - NOTE DIRECTION OF PIN AND WRENCH HOLES WHEN INSTALLING COFFIN LOCKS" & vbCrLf & _
+					"  - USE MEDIUM STRENGTH THREAD LOCKER WHEN INSTALLING ALL FASTENERS" & vbCrLf & _
+					"  - WELD AND T-NUTS MUST BE INSTALLED PRIOR TO ASSEMBLING COLUMN" 
+	Else If addNotes = "Wall Assembly"
+				iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - NOTE DIRECTION OF PIN AND WRENCH HOLES WHEN INSTALLING COFFIN LOCKS" & vbCrLf & _
+					"  - USE MEDIUM STRENGTH THREAD LOCKER WHEN INSTALLING ALL FASTENERS" & vbCrLf & _
+					"  - WELD AND T-NUTS MUST BE INSTALLED PRIOR TO ASSEMBLING WALL" 
+	Else If addNotes = "None"
+		iProperties.Value("Summary", "Comments") = ""
+	Else If addNotes = "Mounting Panel"
+		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - PINS ARE ORIENTATED OPPOSITE DIRECTION OF ARROW" & vbCrLf & _
+					"  - ENSURE THAT HARDWARE IS INSTALLED FLUSH TO BOTTOM FACE" & vbCrLf & _
+					"  - PACKAGE 1/4 SHCS HARDWARE AND INSERT NUTS IN BAG, ATTACH TO ASSEMBLY"
+	Else If addNotes = "Wall Panel"				
+		iProperties.Value("Summary", "Comments") = "NOTES: " & vbCrLf & _
+					"  - ASSEMBLE PARTS USING WOOD GLUE AND STAPLES"& vbCrLf & _
+					"  - STAPLE THROUGH STILES INTO RAILS FROM SIDES" & vbCrLf & _
+					"  - STAPLE THROUGH TOP/BOTTOM RAILS INTO STILES FROM TOP/BOTTOM" & vbCrLf & _
+					"  - STAPLE THROUGH TUBE SUPPORT INTO TOP/BOTTOM RAILS" & vbCrLf & _
+					"  - SAND ALL TABS, NO BURRS OR SPLINTERS ALLOWED" & vbCrLf & _
+					"  - APPLY 1/4in ROUNDOVER TO ALL EDGES AFTER ASSEMBLY" & vbCrLf & _
+					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION" & vbCrLf & _
+					"  - PAINT ACCORDING TO INCLUDED PROCEDURE" & vbCrLf & _
+					"  - ALL MATERIAL IS 12mm (1/2in) FINNISH BIRCH PLYWOOD, UOS" & vbCrLf & _
+					"  - LOCK EXTRUSION IS 1in SQ. STEEL TUBE"
+	Else If addNotes = "Jig"
+		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - PART MUST BE FREE OF SPLINTERS OR BURRS.  "
+	End If
+
+	'\VOID
+	
+	ThisApplication.CommandManager.ControlDefinitions.Item("AppLookAtCmd").Execute2(True)
+	
+	ThisApplication.ActiveView.SetCurrentAsFront
+	
+	Dim oCam As Camera
+	oCam = ThisApplication.ActiveView.Camera
+	
+	oCam.Perspective = False
+	oCam.ViewOrientationType = 10759
+	oCam.Fit()
+	oCam.Apply
+	
+	ThisApplication.ActiveView.SetCurrentAsHome
+
+	'Finish Config and Open form for checking
+	oDoc.Save2
+	iLogicVb.RunExternalRule("Smart Part Config")
+	iLogicForm.ShowGlobal("Smart Part Config")
+End Sub
+
+Function isPrt(ThisDoc As Document) As Boolean
+
+	Debug.Print (ThisDoc.DocumentType)
+
+	If ThisDoc.DocumentType = kPartDocumentObject Then
+
+		isPrt = True
+		
+	Else
+
+		isPrt = False
+		
+	End If
+
+End Function
+
+Function isAsm(ThisDoc As Document) As Boolean
+
+	Debug.Print (ThisDoc.DocumentType)
+
+	If ThisDoc.DocumentType = kAssemblyDocumentObject Then
+
+		isAsm = True
+		
+	Else
+
+		isAsm = False
+		
+	End If
+
+End Function

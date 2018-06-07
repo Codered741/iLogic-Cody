@@ -1,0 +1,12 @@
+'AUTHOR: Cody Redding 
+'CONTACT: Codered741@gmail.com
+'LAST MODIFIED: 20171017
+'STATUS: In Progress
+'LICENSE: Free to redistribute without authorization
+'TITLE: Inventor Auto Config
+
+'PURPOSE: Automatically configure certain aspects of Inventor, like Vault content center and default VBA project.  
+
+Sub Main()
+	Dim app as ThisApplication
+	

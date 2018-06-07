@@ -1,0 +1,171 @@
+Imports Inventor.ViewOrientationTypeEnum
+Imports Inventor.DrawingViewStyleEnum
+
+Sub Main
+'Exit Sub
+    Call CreateFlatInPart
+    Call MakeFlatPattern(1)
+    
+    Dim PartName As String = "PART NUMBER: " & ThisDoc.FileName(False) 'without extension
+    Dim RevNo As String = "REVISION NUMBER: " & iProperties.Value("Project", "Revision Number")
+    Dim Matl as String = "MATERIAL: " & iProperties.Material
+    Dim Drafter As String = "DESIGNER: " & iProperties.Value("Project", "Designer")
+    Dim sText As String
+    sText = PartName & vbNewLine & RevNo & vbNewLine & Matl & vbNewLine & Drafter
+    
+    Call AddGeneralNote(sText, 0, 0)
+    
+   
+    'Call ExportToDXF
+    Call PublishDXF(ThisDoc.PathAndFileName(False))
+End Sub
+
+Public Sub CreateFlatInPart
+'This sub creates a flat parttern within the sheetmetal model file.
+
+'Connect to the active document
+Dim oDoc As PartDocument
+oDoc = ThisApplication.ActiveDocument
+
+'Make a sheet metal component
+Dim oCompDef As SheetMetalComponentDefinition
+
+'Try setting the part file to sheet metal (This is just a test to make sure the file is sheet metal)
+Try
+    oCompDef = oDoc.ComponentDefinition
+Catch
+    ThisApplication.SilentOperation = False    
+    MessageBox.Show("A sheet metal part file must be active to generate the flat pattern.", "Invalid Part File!")
+    Exit Sub
+End Try
+
+'Unfold the part file if it is not already unfolded
+If oCompDef.HasFlatPattern = False Then
+    oCompDef.Unfold
+Else
+    oCompDef.FlatPattern.Edit
+End If
+
+'Try switching back to the folded part
+Try
+    oCompDef.FlatPattern.ExitEdit
+Catch
+    'MsgBox("Error Exitting Flat Pattern!")
+End Try
+
+End Sub
+
+
+
+Public Sub MakeFlatPattern(ViewScale As Double)
+'This rule creates a 1:1 scale flat pattern on a blank idw
+'IMPORTANT!!!!!!!!!
+'These Imports MUST be added at the top of the rule in order for this sub to work!
+'    Imports Inventor.ViewOrientationTypeEnum
+'    Imports Inventor.DrawingViewStyleEnum
+
+'Declare required objects
+Dim oDrawingDoc As DrawingDocument
+Dim oPartDoc As Document
+Dim oSheet As Sheet
+Dim oView4 As DrawingView
+'ViewScale = 1
+
+'Connect to the active part
+oPartDoc = ThisApplication.ActiveDocument
+'Define IDW Template File Location
+oDrawingDoc = ThisApplication.Documents.Add(kDrawingDocumentObject, "", True)
+'Connect to the first drawing sheet
+oSheet = oDrawingDoc.Sheets.Item(1)
+' Create a new NameValueMap object
+Dim oBaseViewOptions As NameValueMap
+oBaseViewOptions = ThisApplication.TransientObjects.CreateNameValueMap
+
+oBaseViewOptions.Add( "SheetMetalFoldedModel", False)
+'Define 2d view bottom left corner points for four views
+oPoint4 = ThisApplication.TransientGeometry.CreatePoint2d(20, 18) ' flat pattern
+oView4 = oSheet.DrawingViews.AddBaseView(oPartDoc, oPoint4, ViewScale, kDefaultViewOrientation, kHiddenLineDrawingViewStyle, , , oBaseViewOptions)
+
+End Sub
+
+Public Sub AddGeneralNote(sText As String, XPos As Double, YPos As Double)
+    'This sub places sText on the active drawing sheet @ (Xos, YPos)
+    XPos = XPos * 2.54
+    YPos = YPos * 2.54
+    
+    ' a reference to the drawing document.
+    ' This assumes a drawing document is active.
+    Dim oDrawDoc As DrawingDocument
+    oDrawDoc = ThisApplication.ActiveDocument
+
+    ' a reference to the active sheet.
+    Dim oActiveSheet As Sheet
+    oActiveSheet = oDrawDoc.ActiveSheet
+    
+    ' a reference to the GeneralNotes object
+    Dim oGeneralNotes As GeneralNotes
+    oGeneralNotes = oActiveSheet.DrawingNotes.GeneralNotes
+    
+    Dim oTG As TransientGeometry
+    oTG = ThisApplication.TransientGeometry
+
+    Dim oGeneralNote As GeneralNote
+    
+    oGeneralNote = oGeneralNotes.AddFitted(oTG.CreatePoint2d(XPos, YPos), sText)
+
+    oDrawDoc = Nothing
+    oActiveSheet = Nothing
+    oGeneralNotes = Nothing
+    oTG = Nothing
+    oGeneralNote = Nothing
+End Sub
+
+Public Sub PublishDXF(PathToSave As String)
+    ' Get the DXF translator Add-In.
+    Dim DXFAddIn As TranslatorAddIn
+    transID = "{C24E3AC4-122E-11D5-8E91-0010B541CD80}"
+    DXFAddIn = ThisApplication.ApplicationAddIns.ItemById(transID)
+    
+    If DXFAddIn.Activated = False Then
+         DXFAddIn.Activate()
+     End If
+    
+    'Set a reference to the active document (the document to be published).
+    Dim oDocument As Document
+    oDocument = ThisApplication.ActiveDocument
+
+    Dim oContext As TranslationContext
+    oContext = ThisApplication.TransientObjects.CreateTranslationContext
+    'oContext.Type = kFileBrowseIOMechanism
+    oContext.Type = IOMechanismEnum.kFileBrowseIOMechanism 
+    
+    ' Create a NameValueMap object
+    Dim oOptions As NameValueMap
+    oOptions = ThisApplication.TransientObjects.CreateNameValueMap
+
+    ' Check whether the translator has 'SaveCopyAs' options
+    If DXFAddIn.HasSaveCopyAsOptions(oDocument, oContext, oOptions) Then
+        Dim strIniFile As String
+        strIniFile = "C:\temp\dxfout.ini"
+
+        ' Create the name-value that specifies the ini file to use.
+        oOptions.Value("Export_Acad_IniFile") = strIniFile
+    End If
+
+
+    ' Create a DataMedium object
+    Dim oDataMedium As DataMedium
+    oDataMedium = ThisApplication.TransientObjects.CreateDataMedium
+
+    'Set the destination file name
+    'MsgBox(PathToSave & ".dxf")
+    oDataMedium.FileName = PathToSave & ".dxf"
+
+    'DXF Exporter does NOT overwrite and will hang if previous files found
+    If System.IO.File.Exists(oDataMedium.FileName) Then
+        System.IO.File.Delete(oDataMedium.FileName)
+    End If
+
+    'Publish document.
+    Call DXFAddIn.SaveCopyAs(oDocument, oContext, oOptions, oDataMedium)
+End Sub

@@ -1,0 +1,42 @@
+﻿<?xml version="1.0"?>
+<doc>
+<assembly>
+<name>
+VaultList
+</name>
+</assembly>
+<members>
+<member name="M:VaultList.Form1.Main">
+	<summary>
+ The main entry point for the application.
+ </summary>
+</member><member name="M:VaultList.Form1.ListAllFiles">
+	<summary>
+ This function lists all the files in the Vault and displays them in the form's ListBox.
+ </summary>
+</member><member name="M:VaultList.Form1.PrintFilesInFolder(Autodesk.DataManagement.Client.Framework.Vault.Currency.Entities.Folder,Autodesk.DataManagement.Client.Framework.Vault.Currency.Connections.Connection)">
+	<summary>
+ Prints all the files in the current Folder and any sub Folders.
+ </summary>
+	<param name="parentFolder">The folder we want to print.</param>
+	<param name="connection">The manager object for making Vault Server calls.</param>
+</member><member name="T:VaultList.Form1">
+	<summary>
+ This is our main form.
+ </summary>
+</member><member name="P:VaultList.My.Resources.Resources.ResourceManager">
+	<summary>
+  Returns the cached ResourceManager instance used by this class.
+</summary>
+</member><member name="P:VaultList.My.Resources.Resources.Culture">
+	<summary>
+  Overrides the current thread's CurrentUICulture property for all
+  resource lookups using this strongly typed resource class.
+</summary>
+</member><member name="T:VaultList.My.Resources.Resources">
+	<summary>
+  A strongly-typed resource class, for looking up localized strings, etc.
+</summary>
+</member>
+</members>
+</doc>

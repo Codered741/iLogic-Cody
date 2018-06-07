@@ -1,0 +1,6 @@
+	Try
+		oDoc.Sheets.AddUsingSheetFormat(oFormat)
+	Catch
+		MessageBox.Show("Caught!")
+	End Try
+	

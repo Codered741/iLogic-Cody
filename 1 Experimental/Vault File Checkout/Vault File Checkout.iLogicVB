@@ -1,0 +1,34 @@
+'AUTHOR: Cody Redding 
+'CONTACT: Codered741@gmail.com
+'LAST MODIFIED: 20171031
+
+'STATUS: Experimental
+'LICENSE: Free to redistribute without authorization
+
+'DESCRIPTION: Check out specified file.  
+
+AddReference "C:\Program Files (x86)\Autodesk\Autodesk Vault 2017 SDK\bin\x64\Autodesk.DataManagement.Client.Framework.xml"
+
+Sub Main()
+	DownloadFiles()
+End Sub
+
+Public Sub DownloadFiles(fileIters As ICollection(Of VDF.Vault.Currency.Entities.FileIteration))
+
+       ' download individual files to a temp location
+
+       Dim settings As NewVDF.Vault.Settings.AcquireFilesSettings(m_conn)
+
+       settings.LocalPath = NewVDF.Currency.FolderPathAbsolute("c:\temp")
+
+       For Each fileIter AsVDF.Vault.Currency.Entities.FileIteration In fileIters
+
+              settings.AddFileToAcquire(fileIter, VDF.Vault.Settings.AcquireFilesSettings.AcquisitionOption.Download)
+
+       Next
+
+ 
+
+       Dim results As VDF.Vault.Results.AcquireFilesResults = m_conn.FileManager.AcquireFiles(settings)
+
+End Sub

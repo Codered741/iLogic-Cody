@@ -1,0 +1,59 @@
+Dim oDoc As Document = ThisApplication.ActiveDocument
+Dim comps As SelectSet = oDoc.SelectSet
+Dim comp As ComponentOccurrence
+Dim oCommandMgr As CommandManager = ThisApplication.CommandManager
+Dim oRefOLE As ReferencedOLEFileDescriptors = oDoc.ReferencedOLEFileDescriptors
+Dim oAsmCompDef As AssemblyComponentDefinition
+oAsmCompDef = ThisApplication.ActiveDocument.ComponentDefinition
+'If there are selected components we can do something, otherwise we're done
+
+ 'Get the plane from the assembly
+Dim oAsmPlane1 As WorkPlane
+Dim oAsmPlane2 As WorkPlane
+Dim oAsmPlane3 As WorkPlane
+ oAsmPlane1 = oAsmCompDef.WorkPlanes.Item(1) 'Assembly YZ Plane
+ oAsmPlane2 = oAsmCompDef.WorkPlanes.Item(2) 'Assembly XZ Plane
+ oAsmPlane3 = oAsmCompDef.WorkPlanes.Item(3) 'Assembly XY Plane
+
+If comps.count > 0 Then   
+
+numParts = comps.count
+offset = 0
+
+	Dim YZIncOffset As Double = InputBox("Enter YZ Incremental Offset.  ", "YZ Offset")
+	 Dim YZOffset As Double = YZIncOffset
+	Dim XZOffset As Double = InputBox("Enter XZ Offset.  ", "XZ Offset")
+	Dim XYOffset As Double = InputBox("Enter XY Offset.  ", "XY Offset")
+
+	
+	For Each comp In comps
+	
+		'Get the plane from the selected part.
+		' The work plane obtained is in the context of the part, not the assembly.
+		Dim oPartPlane1 As WorkPlane
+		Dim oPartPlane2 As WorkPlane
+		Dim oPartPlane3 As WorkPlane
+		 oPartPlane1 =  comp.Definition.WorkPlanes.Item(1) 'Component YZ Plane
+		 oPartPlane2 =  comp.Definition.WorkPlanes.Item(2) 'Component XZ Plane
+		 oPartPlane3 =  comp.Definition.WorkPlanes.Item(3) 'Component XY Plane
+
+		' Create proxies for the work planes of the part.
+		' The proxies represent the part work planes in the context of the assembly.
+		Dim oAsmPlane4 As WorkPlaneProxy
+		Dim oAsmPlane5 As WorkPlaneProxy
+		Dim oAsmPlane6 As WorkPlaneProxy
+		 comp.CreateGeometryProxy(oPartPlane1, oAsmPlane4)
+		 comp.CreateGeometryProxy(oPartPlane2, oAsmPlane5)
+		 comp.CreateGeometryProxy(oPartPlane3, oAsmPlane6)
+		
+		oConstraint = oAsmCompDef.Constraints.AddMateConstraint(oAsmPlane1, oAsmPlane4, YZOffset)
+		oConstraint = oAsmCompDef.Constraints.AddFlushConstraint(oAsmPlane2, oAsmPlane5, XZOffset)
+		oConstraint = oAsmCompDef.Constraints.AddMateConstraint(oAsmPlane3, oAsmPlane6, XYOffset)
+		 YZOffset = YZIncOffset + YZOffset
+	Next
+	
+	MessageBox.Show(numParts & " part(s) were successfully constrained", "Success")
+	
+Else
+	MessageBox.Show("There are no components selected", "Error")
+End If

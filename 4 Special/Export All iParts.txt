@@ -1,0 +1,30 @@
+﻿'https://forums.autodesk.com/t5/inventor-customization/possible-to-check-all-members-of-factory-for-errors-using-ilogic/m-p/3863094/highlight/true#M43278
+Dim app As Inventor.Application = ThisApplication
+Dim oDoc As Inventor.Document = app.ActiveDocument
+Dim oCompDef As ComponentDefinition = oDoc.ComponentDefinition
+Dim currow As Integer
+Dim opFactory As iPartFactory
+Dim opRow As iPartTableRow
+Dim Max as Integer = 10
+
+InventorVb.DocumentUpdate()
+
+opFactory = ThisApplication.ActiveDocument.ComponentDefinition.iPartFactory
+currow = opFactory.DefaultRow.Index
+opFactory.DefaultRow = opFactory.TableRows.Item(1)
+
+If opFactory.TableRows.Count > Max
+	Proceed = MessageBox.Show("This will create " & opFactory.TableRows.Count & " files, and may take some time to execute.  Do you want to continue?  ", "Time Warning",MessageBoxButtons.YesNo,MessageBoxIcon.Warning)
+Else
+	Proceed = vbYes
+End If
+
+If Proceed = vbYes
+	' Iterate through the rows
+	For Each opRow In opFactory.TableRows
+		opFactory.DefaultRow=opRow
+		ThisDoc.Document.SaveAs(ThisDoc.Path & "\" & ThisDoc.FileName(False) & "\" & iProperties.Value("Project", "Part Number") & ".dwg", True)
+	'	MessageBox.Show(ThisDoc.Path & "\" & ThisDoc.FileName(False) & "\" & ThisDoc.FileName(False) & " - " & opRow.Index & ".dwg" , "")
+	Next
+	opFactory.DefaultRow=opFactory.TableRows.Item(currow)
+End If
