@@ -1,0 +1,29 @@
+       Dim Designers() As String
+        ''Read the Props_Designers.txt file and populate cmbProjects and cmbCheckers list items
+        Try
+            Designers = IO.File.ReadAllLines("Z:\PERMANENT INSTALL\Programming\TAIT PI Inventor Add-in\Props_Designers.txt")
+
+            Dim designerlist As New ArrayList()
+            For p As Integer = 0 To Designers.GetUpperBound(0)
+                designerlist.Add(Designers(p))
+            Next
+
+            Dim XDesigner As String
+            For n = 0 To designerlist.Count - 1
+                If designerlist.Item(n).ToString.Substring(0, 1) = "*" Then
+                    GoTo nOBJd
+                End If
+                XDesigner = designerlist.Item(n).ToString
+                cmbDesigners.Items.Add(XDesigner)
+                cmbCheckers.Items.Add(XDesigner)
+nOBJd:
+            Next
+
+        Catch exc As Exception
+            ' Report all errors.
+            MsgBox("Error loading designer list")
+        End Try
+		
+		For Each val In cmbDesigners
+			MsgBox(val)
+		Next
