@@ -1,0 +1,16 @@
+*
+*The list below is formatted in no specific order. If you are adding or removing designers/checkers please obey the following template so the program can interpret your entries without error.
+*[INITIALS]|[(FULL NAME WITH OR WITHOUT MIDDLE INITIAL)] ***If the designer/checker prefers no middle name please leave an additional space after their two intials.
+*Each line represents a designer/checker.
+*Notes lines begin with "*" All lines without an asterisk(*) will be read.
+*
+GDH (Gregory D. Hill)
+ARY (Adam R. Yeager)
+MJE (Manny J. Esteves)
+SMD (Steve M. Dodd)
+CP  (Chuck Pfeiffer)
+NP  (Nicole Parker)
+DJP (David J. Patzer)
+JCL (Jeffrey C. Lund)
+JEL (Jojo E.Leovonchiong)
+SER (Scott E. Rice)
