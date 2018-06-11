@@ -17,21 +17,26 @@ Sub Main()
 	Dim vRepName As String = "Pretty Colors" 'name for the new view rep
 	Dim dPCViewRep As DesignViewRepresentation 
 	Dim oOccs as ComponentOccurrencesEnumerator
-
+	Dim PCVRepOn as Boolean = False
 	Try
 		dPCViewRep = dViewReps.Item(vRepName)
 	Catch 
 		dMasterViewRep.Activate()
 		dViewReps.Add(vRepName)
+		PCVRepOn = True
 	End Try 
-		
-    ' Initialize the random number generator and get
+	
+	IF PCVRepOn = False Then
+		dPCViewRep.Activate()
+    End If
+	
+	' Initialize the random number generator and get
     ' the number of render styles defined.
 	Randomize
     Dim iColorCount As Long
     iColorCount = oAsmDoc.RenderStyles.Count
 	
-	If oAsmDoc.AllReferencedDocuments.Count > 30 Then
+	If oAsmDoc.AllReferencedDocuments.Count > 50 Then
 		uCont = MessageBox.Show("This assembly has a large number of parts.  This operation may take considerable time.  Are you sure you want to continue?", "Inventor", MessageBoxButtons.OKCancel, MessageBoxIcon.Question)
 		If uCont = vbCancel Then
 			Exit Sub
