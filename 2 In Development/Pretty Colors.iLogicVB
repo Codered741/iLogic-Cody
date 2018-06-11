@@ -1,4 +1,4 @@
-'highlighter colors
+﻿'highlighter colors
 'Runs in an Assembly to give all first level components a random color.  
 'Procedure:
 ' Get all first level components
@@ -14,26 +14,25 @@ Sub Main()
 	Dim dViewRepMgr As RepresentationsManager = oAsmDef.RepresentationsManager
 	Dim dViewReps As DesignViewRepresentations = dViewRepMgr.DesignViewRepresentations
 	Dim dMasterViewRep As DesignViewRepresentation = dViewReps.Item(1) 'assume that the first view rep is the master
-	Dim vRepName as String = "Pretty Colors" 'name for the new view rep
-	Dim dPCViewRep As DesignViewRepresentation = dViewReps.Item(vRepName)
+	Dim vRepName As String = "Pretty Colors" 'name for the new view rep
+	Dim dPCViewRep As DesignViewRepresentation 
 	Dim oOccs as ComponentOccurrencesEnumerator
-	
+
 	Try
-		dPCViewRep.Activate()
+		dPCViewRep = dViewReps.Item(vRepName)
 	Catch 
 		dMasterViewRep.Activate()
 		dViewReps.Add(vRepName)
-		dPCViewRep.Activate()
 	End Try 
 		
     ' Initialize the random number generator and get
     ' the number of render styles defined.
-    Randomize
+	Randomize
     Dim iColorCount As Long
     iColorCount = oAsmDoc.RenderStyles.Count
 	
 	If oAsmDoc.AllReferencedDocuments.Count > 30 Then
-		uCont = MessageBox.Show("This assembly has a large number of parts.  This operation may take considerable time.  Are you sure you want to continue?", "Inventor", MessageBoxButtons.OKCancel, MessageBoxIcons.Question)
+		uCont = MessageBox.Show("This assembly has a large number of parts.  This operation may take considerable time.  Are you sure you want to continue?", "Inventor", MessageBoxButtons.OKCancel, MessageBoxIcon.Question)
 		If uCont = vbCancel Then
 			Exit Sub
 		End If
@@ -42,7 +41,18 @@ Sub Main()
 	For Each refDoc in oAsmDoc.AllReferencedDocuments
 		If refDoc.DocumentType = kPartDocumentObject Then
 			oOccs = oAsmDef.Occurrences.AllReferencedOccurrences(refDoc)
+		
+		loop1:
+
 			pColor = Int((iColorCount * Rnd) + 1)
+			
+			If oAsmDoc.RenderStyles.Item(pColor).Name.Contains("RAL") Then
+				'Do nothing
+			Else
+				'pColor = Int((iColorCount * Rnd) + 1)
+				GoTo loop1 'pick a new color, until a RAL color is selected.  
+			End If
+			
 			For Each oOcc In oOccs
 				oOcc.SetRenderStyle(kOverrideRenderStyle, oAsmDoc.RenderStyles.Item(pColor))
 			Next
