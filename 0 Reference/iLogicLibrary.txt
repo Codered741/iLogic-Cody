@@ -1,0 +1,508 @@
+'AUTHOR: Cody Redding 
+'CONTACT: Codered741@gmail.com
+'LAST MODIFIED: 20170721
+'STATUS: Library, for reference only.  
+'LICENSE: Free to redistribute without authorization
+
+'FUNCTION: Library of subroutines
+
+Function EdgeCounts(oPartDoc) as Integer
+'init
+	Dim oCompDef As ComponentDefinition = oPartDoc.ComponentDefinition
+	Dim oSurfaceBodies As SurfaceBodies = oCompDef.SurfaceBodies
+	Dim oSurfaceBody As SurfaceBody = oSurfaceBodies(1)
+'main
+	Return oSurfaceBody.Edges.Count
+	
+End Function
+
+Function GetHolesQty(ByVal oDef As PartComponentDefinition) As Integer
+
+	Dim N As Integer = 0 'counter
+	Dim oHoles As HoleFeatures = oDef.Features.HoleFeatures
+	
+	For Each oH As HoleFeature In oHoles
+		If Not oH.Suppressed Then
+			N += oH.HoleCenterPoints.Count
+		End If
+	Next
+	
+	'have we any rectangular patterns ?
+	Dim oRectPatterns As RectangularPatternFeatures
+	oRectPatterns = oDef.Features.RectangularPatternFeatures
+	
+	For Each oRPF As RectangularPatternFeature In oRectPatterns
+		Dim m As Integer = 0
+		If Not oRPF.Suppressed Then
+			If (TypeOf oRPF.ParentFeatures.Item(1) Is HoleFeature) Then
+				Dim oH As HoleFeature = oRPF.ParentFeatures.Item(1)
+				If Not oH.Suppressed Then
+					For Each oFPE As FeaturePatternElement In oRPF.PatternElements
+						If Not oFPE.Suppressed Then m += 1
+					Next
+				End If
+			End If
+			N += m - 1
+		Else
+			N += m
+		End If
+	Next
+	
+	'have we any circular patterns ?
+	Dim oCircPatterns As CircularPatternFeatures
+	oCircPatterns = oDef.Features.CircularPatternFeatures
+	
+	For Each oCPF As CircularPatternFeature In oCircPatterns
+		Dim m As Integer = 0
+		If Not oCPF.Suppressed Then
+			If (TypeOf oCPF.ParentFeatures.Item(1) Is HoleFeature) Then
+				Dim oH As HoleFeature = oCPF.ParentFeatures.Item(1)
+				If Not oH.Suppressed Then
+					For Each oFPE As FeaturePatternElement In oCPF.PatternElements
+						If Not oFPE.Suppressed Then m += 1
+					Next
+				End If
+			End If
+			N += m - 1
+		Else
+			N += m
+		End If
+	Next
+	Return N
+End Function
+
+Sub ParamAdd(Params As List(Of String), UnitType As String)
+	'Init
+	Dim oPartDoc As PartDocument = ThisApplication.ActiveDocument
+	Dim oCompDef As ComponentDefinition = oPartDoc.ComponentDefinition
+	oMyParameter=oCompDef.Parameters.UserParameters
+	
+	If UnitType = "BOOL" Then
+	
+	'Main
+		For Each pmtr In Params
+			Try
+				param = Parameter.Param(pmtr)
+			Catch
+				oParameter=oMyParameter.AddByValue(pmtr, True, "BOOLEAN")
+			End Try
+		Next 
+	Else If UnitType = "IN" Then
+		For Each pmtr In Params
+			Try
+				param = Parameter.Param(pmtr)
+			Catch
+				oParameter=oMyParameter.AddByValue(pmtr, 0 in, UnitsTypeEnum.kInchLengthUnits)
+			End Try
+		Next 
+	Else If UnitType = "TXT"
+		For Each pmtr In Params
+			Try
+				param = Parameter.Param(pmtr)
+			Catch
+				oParameter=oMyParameter.AddByValue(pmtr, " ", UnitsTypeEnum.kTextUnits)
+			End Try
+		Next 
+	End If
+End Sub
+
+Function MaterialRemoved(Doc as Document, XDIM As Double, YDIM As Double, ZDIM As Double) As Double 'Returns Difference between the part bounding box and the part volume
+	
+	Dim partVol as Double = Doc.ComponentDefinition.MassProperties.Volume
+	Dim oUOM As UnitsOfMeasure = Doc.UnitsOfMeasure 
+	Dim oLenUnitsEnum as Integer = oUOM.LengthUnits
+	
+	'Convert Bounding Box Dims to Inches
+	XDIMin = oUOM.ConvertUnits(XDIM, oLenUnitsEnum, "in")
+	YDIMin = oUOM.ConvertUnits(YDIM, oLenUnitsEnum, "in")
+	ZDIMin = oUOM.ConvertUnits(ZDIM, oLenUnitsEnum, "in")
+	
+	'Convert Part Volume from cubic centimeters to cubic Inches
+	Dim PartVolIn As Double = oUOM.ConvertUnits(partVol, "cm^3", "inch^3")
+	
+	Dim BBoxVol as Double = XDIMin * YDIMin * ZDIMin
+
+	MtlRemoved = Abs(Round(BBoxVol - PartVolIn, 2))
+	
+	Return MtlRemoved
+	
+End Function
+
+Function GetPerimeter(Doc as Document) as Double
+    '  a reference to the part component definition.
+    ' This assumes that a part document is active.
+    Dim oCompDef As PartComponentDefinition
+    oCompDef = ThisApplication.ActiveEditDocument.ComponentDefinition
+	
+    ' Get the first face of the model.  This sample assumes a simple
+    ' model where at least the first face is a plane.  (A box is a good
+    ' test case.)
+	Dim oFace As Face
+    oFace = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFacePlanarFilter, "Select bottom face")
+    ' Get one of the edges of the face to use as the sketch x-axis.
+    Dim oEdge As Edge
+    oEdge = oFace.Edges.Item(2)
+    
+    ' Get the start vertex of the edge to use as the origin of the sketch.
+    Dim oVertex As Vertex
+    oVertex = oEdge.StartVertex
+
+    ' Create a new sketch.  This last argument is  to true to cause the
+    ' creation of sketch geometry from the edges of the face.
+    Dim oSketch As PlanarSketch
+    oSketch = oCompDef.Sketches.AddWithOrientation(oFace, oEdge, True, True, oVertex, True)
+    
+    ' Change the name.
+    oSketch.Name = "Router Estimate"
+    
+	Dim oProfile As Profile
+	oProfile = oSketch.Profiles.AddForSolid
+
+	Dim oRegionProps As RegionProperties
+    oRegionProps = oProfile.RegionProperties
+	
+	oRegionProps.Accuracy = AccuracyEnum.kMedium
+	
+	Dim oUOM As UnitsOfMeasure = Doc.UnitsOfMeasure
+	
+	GetPerimeter = Round(oUOM.ConvertUnits(oRegionProps.Perimeter, "cm", "in"), 2)
+	
+	oSketch.Delete
+	
+End Function
+
+
+Public Sub OPSMVParamAdd (Params As List(Of String))
+	For Each pmtr In Params 
+		oMyParameter=ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters
+		oParameter=oMyParameter.AddByValue(pmtr, "", UnitsTypeEnum.kTextUnits)
+		MultiValue.SetList(pmtr, " ", "OP009:Lathe CNC~", "OP010:Mill CNC~", "OP011:Router CNC~", "OP012:Mill Manual~", "OP013:Lathe Manual~", "OP014:Cutting~", "OP015:OS - Milling~", "OP016:Rolling~", "OP017:Bending~", "OP020:Paint~", "OP022:OS - Turning~", "OP023:OS - 2D Laser~", "OP024:OS - Waterjetting~", "OP034:OS - Forming~", "OP035:OS - 3D Laser~", "OP036:OS - TIG Welding~", "OP038:OS - Turnkey Fabrication~", "OP039:OS - Powder Coating~", "OP040:OS – Anodizing~", "OP041:OS - Injection Molding~", "OP060:OS – Misc~", "OP061:Softgoods - Fabrication~", "OP062:Control – Fabrication~", "OP071:OS - 2D Laser & Form~", "OP080:OS – Plating~", "OP086:OS – Polishing~", "OP110:OS - Routing~", "OP139:3D – Printing~", "OP141:OS - Upholstery~", "OP145:Post Processing~", "OP146:Laser Cutting / Etching~")
+	Next
+End Sub
+
+'////////////////////////////Affect Selection Set//////////////////
+Dim oDoc As Document = ThisApplication.ActiveDocument
+Dim comps As SelectSet = oDoc.SelectSet
+Dim comp As ComponentOccurrence
+Dim oCommandMgr As CommandManager = ThisApplication.CommandManager
+Dim oRefOLE As ReferencedOLEFileDescriptors = oDoc.ReferencedOLEFileDescriptors
+'If there are selected components we can do something, otherwise we're done
+
+If comps.count > 0 Then   
+
+numParts = comps.count
+
+	For Each comp In comps
+		'code per part goes here.  
+	Next
+	
+	MessageBox.Show(numParts & " parts were successfully changed", "Success")
+	
+Else
+	MessageBox.Show("There are no components selected", "Error")
+End If
+
+'//////////////////////////File Dialog///////////////////////////////
+Dim oFileDlg As inventor.FileDialog = Nothing
+InventorVb.Application.CreateFileDialog(oFileDlg)
+oFileDlg.Filter = "Inventor Files (*.iam;*.ipt)|*.iam;*.ipt|All Files (*.*)|*.*"
+oFileDlg.DialogTitle = "Select a File"
+oFileDlg.InitialDirectory = ThisDoc.Path
+oFileDlg.CancelError = True
+On Error Resume Next
+oFileDlg.ShowOpen()
+If Err.Number <> 0 Then
+MessageBox.Show("File not chosen.", "Dialog Cancellation")
+Return
+ElseIf oFileDlg.FileName <> "" Then
+oFile = oFileDlg.FileName
+End If
+
+Public Function GetActiveDoc() As Inventor.Document
+
+    GetActiveDoc = ThisApplication.ActiveDocument
+    
+End Function
+
+
+'///////////////////////////////Document Type Check/////////////////////////////////////
+Function isPrtAsm(ThisDoc As Document) As Boolean
+	Debug.Print (ThisDoc.DocumentType)
+	If ThisDoc.DocumentType = kAssemblyDocumentObject Then
+		isPrtAsm = True
+	ElseIf ThisDoc.DocumentType = kPartDocumentObject Then
+		isPrtAsm = True
+	Else
+		isPrtAsm = False
+		Debug.Print ("isPrtAsm found " & ThisDoc.DocumentType)
+	End If
+End Function
+
+Function isDwg(ThisDoc as Document) As Boolean
+	Debug.Print (ThisDoc.DocumentType)
+	If ThisDoc.DocumentType = kDrawingDocumentObject
+		isDwg = True
+	Else 
+		isDwg = False
+	End If
+End Function
+
+Function isPrt(ThisDoc As Document) As Boolean
+	Debug.Print (ThisDoc.DocumentType)
+	If ThisDoc.DocumentType = kPartDocumentObject Then
+		isPrt = True
+	Else
+		isPrt = False
+	End If
+End Function
+
+Function isAsm(ThisDoc As Document) As Boolean
+	Debug.Print (ThisDoc.DocumentType)
+	If ThisDoc.DocumentType = kAssemblyDocumentObject Then
+		isAsm = True
+	Else
+		isAsm = False
+	End If
+End Function
+
+Function isSaved(Doc as Document) As Boolean
+	If Doc.FileSaveCounter >= 1 Then
+		Return True
+	Else
+		Return False
+	End If
+End Function
+
+'/////////////////////////////////Find Drawing File/////////////////////////////////////
+' Find the drawing for the specified part of assembly.
+Function FindDrawingFile(PartOrAssemblyDoc As Document)
+    Dim fullFilename As String
+    fullFilename = PartOrAssemblyDoc.fullFilename
+   
+    ' Extract the path from the full filename.
+    Dim path As String
+    path = ThisApplication.DesignProjectManager.ActiveDesignProject.WorkspacePath
+   
+    ' Extract the filename from the full filename.
+    Dim filename As String
+    filename = Right$(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
+   
+    ' Replace the extension with "dwg"
+    filename = Left$(filename, InStrRev(filename, ".")) & "dwg"
+   
+    ' Find if the drawing exists.
+    Dim drawingFilename As String
+    drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+    ' Check the result.
+    If drawingFilename = "" Then
+        ' Try again with idw extension.
+        filename = Left$(filename, InStrRev(filename, ".")) & "idw"
+       
+        ' Find if the drawing exists.
+        drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+        ' Return the result.
+        If drawingFilename <> "" Then
+            FindDrawingFile = drawingFilename
+        Else
+            FindDrawingFile = ""
+        End If
+    Else
+        ' Return the result.
+        FindDrawingFile = drawingFilename
+    End If
+End Function
+
+
+Function FindDrawingFileByName(PartOrAssemblyDoc As String)
+    Dim fullFilename As String
+    fullFilename = PartOrAssemblyDoc
+	
+    ' Extract the path from the full filename.
+    Dim path As String
+    path = ThisApplication.DesignProjectManager.ActiveDesignProject.WorkspacePath
+   
+    ' Extract the filename from the full filename.
+    Dim filename As String
+    filename = Right$(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
+   
+    ' Replace the extension with "dwg"
+    filename = Left$(filename, InStrRev(filename, ".")) & "dwg"
+   
+    ' Find if the drawing exists.
+    Dim drawingFilename As String
+    drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+    ' Check the result.
+    If drawingFilename = "" Then
+        ' Try again with idw extension.
+        filename = Left$(filename, InStrRev(filename, ".")) & "idw"
+       
+        ' Find if the drawing exists.
+        drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+        ' Return the result.
+        If drawingFilename <> "" Then
+            FindDrawingFileByName = drawingFilename
+        Else
+            FindDrawingFileByName = ""
+        End If
+    Else
+        ' Return the result.
+        FindDrawingFileByName = drawingFilename
+    End If
+End Function
+
+
+'///////////////////////////////update multivalue parameter//////////////////////////////////////
+'Clears multivalue parameter list and adds new array of values.  
+Private Sub UpdateMVList(ParamName as String, ByVal MVList() as String)
+	
+	Param = ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters.Item(ParamName)
+	Param.ExpressionList.ClearAll()
+	Param.ExpressionList.SetExpressionList(MVList, False)
+	
+End Sub
+
+'//////////////////////////////Operations list add/update////////////////////////////////////////
+'Clears multivalue parameter list and adds new array of values.  
+Private Sub TTOps(ParamName as String)
+	
+	Dim OPList(0 to 31) As String 
+	
+	OPList(0)=""" """
+	OPList(1)="""OP009:Lathe CNC~"""
+	OPList(2)="""OP010:Mill CNC~"""
+	OPList(3)="""OP011:Router CNC~"""
+	OPList(4)="""OP012:Mill Manual~"""
+	OPList(5)="""OP013:Lathe Manual~"""
+	OPList(6)="""OP014:Cutting~"""
+	OPList(7)="""OP015:OS - Milling~"""
+	OPList(8)="""OP016:Rolling~"""
+	OPList(9)="""OP017:Bending~"""
+	OPList(10)="""OP020:Paint~"""
+	OPList(11)="""OP022:OS - Turning~"""
+	OPList(12)="""OP023:OS - 2D Laser~"""
+	OPList(13)="""OP024:OS - Waterjetting~"""
+	OPList(14)="""OP034:OS - Forming~"""
+	OPList(15)="""OP035:OS - 3D Laser~"""
+	OPList(16)="""OP036:OS - TIG Welding~"""
+	OPList(17)="""OP038:OS - Turnkey Fabrication~"""
+	OPList(18)="""OP039:OS - Powder Coating~"""
+	OPList(19)="""OP040:OS – Anodizing~"""
+	OPList(20)="""OP041:OS - Injection Molding~"""
+	OPList(21)="""OP060:OS – Misc~"""
+	OPList(22)="""OP061:Softgoods - Fabrication~"""
+	OPList(23)="""OP062:Control – Fabrication~"""
+	OPList(24)="""OP071:OS - 2D Laser & Form~"""
+	OPList(25)="""OP080:OS – Plating~"""
+	OPList(26)="""OP086:OS – Polishing~"""
+	OPList(27)="""OP110:OS - Routing~"""
+	OPList(28)="""OP139:3D – Printing~"""
+	OPList(29)="""OP141:OS - Upholstery~"""
+	OPList(30)="""OP145:Post Processing~"""
+	OPList(31)="""OP146:Laser Cutting / Etching~"
+	
+	Dim Param As UserParameter
+	Param = ThisApplication.ActiveDocument.ComponentDefinition.Parameters.UserParameters.Item(ParamName)
+	Param.ExpressionList.ClearAll()
+	Param.ExpressionList.SetExpressionList(OPList, False)
+	
+End Sub
+
+'//////////////////////////////Get File name///////////////////////////////////////////////////////
+'get file name of specified document, without file type or path
+Function DocumentFileName(Doc As Document) As String
+	Dim FilePath as String
+	FilePath = Doc.FullFileName
+	DocumentFileName = IO.Path.GetFileNameWithoutExtension(FilePath)
+	'MsgBox(DocumentFileName)
+End Function
+
+'Choose Folder directory with dialog
+Function ChooseFolderLocation(oDoc as Document)
+	' Define folder browse dialog
+	Dim Dialog = New FolderBrowserDialog()
+
+	' Set options for folder browser dialog
+	Dialog.SelectedPath = "R:\"
+	Dialog.ShowNewFolderButton = True
+	Dialog.Description = "Choose Folder for Export..."
+	
+	' Show dialog box
+	If DialogResult.OK = Dialog.ShowDialog() Then
+		' User clicked 'ok' on dialog box - capture the export path
+		ChooseFolderLocation = Dialog.SelectedPath & "\"
+		
+	Else
+		' User clicked 'cancel' on dialog box - exit
+		ChooseFolderLocation = ""
+	End If
+End Function
+
+'Check length of string
+Function StrLengthCheck(CheckStr As String, AllowLen As Integer) As Boolean
+			If Len(CheckStr) > AllowLen Then
+				StrLengthCheck = True
+			Else
+				StrLengthCheck = False
+			End If
+End Function
+
+Dim ParamGroup as CustomParameterGroup
+
+'\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\CREATE CUSTOM PARAMETER GROUP\\\\\\\\\\\\\\\\\\\\\
+Sub CustomParamGroup(Doc as Document, Params as List(of String), GroupName As String)
+
+	Dim oCompDef as ComponentDefinition = Doc.ComponentDefinition
+	UserParams = oCompDef.Parameters.UserParameters
+	
+	Dim ParamGroup as CustomParameterGroup
+	
+	Try
+		ParamGroup = oCompDef.Parameters.CustomParameterGroups.Item(GroupName)
+	Catch
+		ParamGroup = oCompDef.Parameters.CustomParameterGroups.Add(GroupName, GroupName)
+	End Try
+
+	For Each param in Params
+		ParamGroup.Add(UserParams.Item(param))
+	Next
+	
+End Sub
+
+Function ComplexityModifier(Count as Integer) As Integer
+	Select Case	Count
+		Case 1 to 100
+			ComplexityModifier = 1.5
+		Case 101 to 200
+			ComplexityModifier = 1.8
+		Case 201 To 300
+			ComplexityModifier = 2.1
+		Case 301 To 400
+			ComplexityModifier = 2.5
+		Case 401 To 500
+			ComplexityModifier = 2.8
+		Case 501 To 600
+			ComplexityModifier = 3.4
+		Case 601 To 700
+			ComplexityModifier = 4
+		Case 701 To 800
+			ComplexityModifier = 5
+		Case 801 To 900
+			ComplexityModifier = 6
+		CAse 901 To 1000
+			ComplexityModifier = 7
+		Case 1001 To 1100
+			ComplexityModifier = 8
+		Case 1101 To 1200
+			ComplexityModifier = 8.5
+		Case 1201 To 1300
+			ComplexityModifier = 9
+		Case 1301 To 1400
+			ComplexityModifier = 9.5
+		Case Count > 1401
+			ComplexityModifier = 10
+	End Select
+End Function
