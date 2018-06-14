@@ -13,7 +13,7 @@ Dim Doc as Document = ThisApplication.Documents.ItemByName("C:\_vaultWIP\designs
 
 Dim RefDocs as ComponentOccurrencesEnumerator = oAsmDef.Occurrences.AllReferencedOccurrences(Doc)
 
-For i = 1 To 31
+For i = 2 To 31
 	CurView = dViewReps.Item(i)
 	CurView.Activate()
 	
