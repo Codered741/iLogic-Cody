@@ -26,4 +26,4 @@ oDoc.Save
 
 oCommandMgr.ControlDefinitions.Item("VaultCheckinTop").Execute
 
-ThisApplication.ActiveDocument.Close
+ThisApplication.ActiveDocument.Close(True)

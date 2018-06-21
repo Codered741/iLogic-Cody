@@ -71,21 +71,18 @@ Sub Main()
 			'look for files with the same file name as ref doc, in the project location
 			FileNameDXF = RefDwgDocFileName & ".dxf"
 			oAppend.Write(FileNameDXF & ",")
-			If System.IO.File.Exists(FileNameDXF) Then 'search for single page drawings
-				copiedFileName = collectFolder & RefDwgBaseFileName & ".dxf"
-				System.IO.Directory.CreateDirectory(collectFolder)
-				My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName, Microsoft.VisualBasic.FileIO.UIOption.AllDialogs, Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing)
-			End If
+			copiedFileName = collectFolder & RefDwgBaseFileName & ".dxf"
+			
+			DoCollect(FileNameDXF,copiedFileName)
 			
 			'look for drawing file with the same file name as the ref doc, in the project location, page 1-10
 			For i = 1 to 10 'search for pages 1-10
 				FileNameDXF = RefDwgDocFileNamePN & " p" & i & ".dxf"
 				oAppend.Write(FileNameDXF & ",")
-				If System.IO.File.Exists(FileNameDXF) Then
-					copiedFileName = collectFolder & RefDwgBaseFileName & " p" & i & ".dxf"
-					System.IO.Directory.CreateDirectory(collectFolder)
-					My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName, Microsoft.VisualBasic.FileIO.UIOption.AllDialogs, Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing)
-				End If
+				copiedFileName = collectFolder & RefDwgBaseFileName & " p" & i & ".dxf"
+				
+				DoCollect(FileNameDXF,copiedFileName)
+				
 			Next 
 		End If
 		
@@ -93,24 +90,23 @@ Sub Main()
 			'look for files with the part number of the ref doc, in the project location
 			FileNameDXF =  Left(RefDwgDocFileNamePN, RefDwgDocFileNamePN.Length - RefPN.Value.Length) & ".dxf"
 			oAppend.Write(FileNameDXF & ",")
-			If System.IO.File.Exists(FileNameDXF) Then 'search for single page drawings
-				copiedFileName = collectFolder & RefDwgBaseFileNamePN &  ".dxf"
-				System.IO.Directory.CreateDirectory(collectFolder)
-				My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName, Microsoft.VisualBasic.FileIO.UIOption.AllDialogs, Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing)
-			End If
+			copiedFileName = collectFolder & RefDwgBaseFileNamePN &  ".dxf"
+			
+			DoCollect(FileNameDXF,copiedFileName)
 					
 			'look for files with the part number of the ref doc, in the project location, page 1-10
 			For i = 1 to 10 'search for pages 1-10 by part number
 				FileNameDXF = Left(RefDwgDocFileNamePN, RefDwgDocFileNamePN.Length - RefPN.Value.Length) & " p" & i & ".dxf"
 				oAppend.Write(FileNameDXF)
-				If System.IO.File.Exists(FileNameDXF) Then
-					copiedFileName = collectFolder & RefDwgBaseFileNamePN & " p" & i & ".dxf"
-					System.IO.Directory.CreateDirectory(collectFolder)
-					My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName, Microsoft.VisualBasic.FileIO.UIOption.AllDialogs, Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing)
-				End If
+				copiedFileName = collectFolder & RefDwgBaseFileNamePN & " p" & i & ".dxf"
+				
+				DoCollect(FileNameDXF,copiedFileName)
+				
 			Next
 		End If
+		
 		oAppend.WriteLine("")
+		
 	Next
 	
 	If System.IO.Directory.Exists(collectFolder) Then
@@ -122,7 +118,14 @@ Sub Main()
 	
 	MsgBox("Done")
 	
-End Sub
+End Sub 'Main
+
+Sub DoCollect(FileNameDXF as String, copiedFileName as String)
+	If System.IO.File.Exists(FileNameDXF) Then 'search for single page drawings
+		System.IO.Directory.CreateDirectory(collectFolder)
+		My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName, Microsoft.VisualBasic.FileIO.UIOption.AllDialogs, Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing)
+	End If
+End Sub 'DoCollect
 
 Function FindDrawingFile(PartOrAssemblyDoc As Document)
     Dim fullFilename As String
@@ -161,7 +164,7 @@ Function FindDrawingFile(PartOrAssemblyDoc As Document)
         ' Return the result.
         FindDrawingFile = drawingFilename
     End If
-End Function
+End Function 'FindDrawingFile
 
 Function FindDrawingFilePN(PartOrAssemblyDoc As Document)
     Dim fullFilenamePN As String
@@ -202,7 +205,7 @@ Function FindDrawingFilePN(PartOrAssemblyDoc As Document)
         ' Return the result.
          Return drawingFilename
     End If
-End Function
+End Function 'FindDrawingFilePN
 
 Function isDwg(ThisDoc as Document) As Boolean
 	Debug.Print (ThisDoc.DocumentType)
@@ -211,12 +214,12 @@ Function isDwg(ThisDoc as Document) As Boolean
 	Else 
 		isDwg = False
 	End If
-End Function
+End Function 'isDwg
 
 Function DocumentFileName(Doc As String) As String
 	DocumentFileName = Left(Doc, Doc.Length - 4)
 	'MsgBox(DocumentFileName)
-End Function
+End Function 'DocumentFileName
 
 Function isAsm(ThisDoc As Document) As Boolean
 	Debug.Print (ThisDoc.DocumentType)
@@ -225,18 +228,18 @@ Function isAsm(ThisDoc As Document) As Boolean
 	Else
 		isAsm = False
 	End If
-End Function
+End Function 'isAsm
 
 Function BaseFilename(ByVal fullFilename As String) As String
     Dim temp As String
     temp = Right(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
     BaseFilename = Left(temp, InStrRev(temp, ".") - 1)
-End Function
+End Function 'BaseFilename
 
 Function FilePath(ByVal fullFilename As String) As String
     FilePath = Left(fullFilename, InStrRev(fullFilename, "\"))
-End Function
+End Function 'FilePath
 
 Function DocumentFileNameExt(Doc as Document) As String
 	DocumentFileNameExt = IO.Path.GetFileName(Doc.FullFileName)
-End Function
+End Function 'DocumentFileNameExt
