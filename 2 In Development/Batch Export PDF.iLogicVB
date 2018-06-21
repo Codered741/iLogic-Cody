@@ -1,0 +1,330 @@
+Imports System.IO
+Imports System.IO.Path
+Imports System.Collections
+Imports My.Computer.FileSystem
+
+Sub Main()
+
+	Dim oDoc as Document = ThisApplication.ActiveDocument
+	
+	If isAsm(oDoc) = False
+		MsgBox("Please run from an Assembly")
+		Return
+	End If
+	
+	Dim oAppend As System.IO.StreamWriter
+	Dim oFile As String = "Z:\Inventor Data\BPLog.log"
+
+	Try
+		oAppend = IO.File.AppendText(oFile)
+	Catch
+		noWrite = True
+	End Try
+	
+	If noWrite <> True Then
+		oAppend.WriteLine("/////////////////////BATCH EXPORT PDF/////////////////////")
+		oAppend.WriteLine(ThisApplication.UserName & "," & DateTime.Now.ToString("G") & "," & oDoc.FullFileName)
+	End If
+	
+	Dim oRefDocs as DocumentsEnumerator = oDoc.AllReferencedDocuments
+	Dim copiedFileName As String
+	
+	Dim RefDwgFullFileName As String
+
+	Dim iProps as PropertySet
+	Dim RefPN
+	Dim PrinterName as String = "PDFCreator"
+	
+	'setup options for open
+	Dim oOptions as NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap
+	oOptions.Value("DeferUpdates") = True
+	oOptions.Value("FastOpen") = True
+	
+	'Find drawing of current document and print if found
+	'Get part number property of the filename
+	iProps = oDoc.PropertySets.Item("Design Tracking Properties")
+	RefPN = iProps.Item("Part Number")
+	
+	'write to log
+	oAppend.Write(oDoc.FullFileName & ",")
+
+	'Attempt to find a drawing file of the same name as the model doc
+	RefDwgFullFileName = FindDrawingFile(oDoc)
+		
+	If RefDwgFullFileName.Length > 5 Then 
+		
+		If noWrite <> True Then 
+			oAppend.Write(RefDwgFullFileName & ",Skipping PN search,")
+		End If
+		
+	Else
+	
+		If noWrite <> True Then
+			oAppend.Write("No File found by File Name,")
+		End If
+		
+		RefDwgFullFileName = FindDrawingFilePN(oDoc)
+		
+		If RefDwgFullFileName.Length > 5 Then	
+			If noWrite <> True Then
+				oAppend.Write(RefDwgFullFileName & ",")
+			End If
+		Else 
+			If noWrite <> True Then
+				oAppend.Write("No File found by Part Number,")
+			End If
+		End If
+		
+	End If
+
+	If RefDwgFullFileName.Length > 5 Then
+		ThisApplication.Documents.OpenWithOptions(RefDwgFullFileName, oOptions, True)
+		
+		Try
+			DwgPrint(PrinterName)
+		Catch 
+			MessageBox.Show("Something went wrong!  Make sure you have PDFCreator installed and named the same.  ", "Printing Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+			If noWrite <> True Then
+				oAppend.WriteLine("!!! EXITING - Printing Error")
+				oAppend.Close()
+			End If 
+			Exit Sub
+		End Try
+			
+		ThisApplication.ActiveDocument.Close(True)
+		
+		If noWrite <> True Then
+			oAppend.WriteLine("Printed")
+		End If
+		
+	Else
+		If noWrite <> True Then
+			oAppend.WriteLine("No Drawing found")
+		End If
+	End If
+	
+	'Iterate referenced documents, find drawings and print if found.  
+	For Each oRefDoc in oRefDocs
+		'Get part number property of the filename
+		iProps = oRefDoc.PropertySets.Item("Design Tracking Properties")
+		RefPN = iProps.Item("Part Number")
+		
+		'write to log
+		oAppend.Write(oRefDoc.FullFileName & ",")
+
+		'Attempt to find a drawing file of the same name as the model doc
+		RefDwgFullFileName = FindDrawingFile(oRefDoc)
+			
+		If RefDwgFullFileName.Length > 5 Then 
+			
+			If noWrite <> True Then 
+				oAppend.Write(RefDwgFullFileName & ",Skipping PN search,")
+			End If
+
+		Else
+			If noWrite <> True Then
+				oAppend.Write("No File found by File Name,")
+			End If
+			
+			RefDwgFullFileName = FindDrawingFilePN(oRefDoc)
+			
+			If RefDwgFullFileName.Length > 5 Then	
+				If noWrite <> True Then
+					oAppend.Write(RefDwgFullFileName & ",")
+				End If
+			Else 
+				If noWrite <> True Then
+					oAppend.Write("No File found by Part Number,")
+				End If
+			End If
+			
+		End If
+		
+		If RefDwgFullFileName.Length > 5 Then
+			ThisApplication.Documents.OpenWithOptions(RefDwgFullFileName, oOptions, True)
+			
+			Try
+				DwgPrint(PrinterName)
+			Catch 
+				MessageBox.Show("Something went wrong!  Make sure you have PDFCreator installed and named the same.  ", "Printing Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+				
+				If noWrite <> True Then
+					oAppend.WriteLine("Printing Error")
+					oAppend.Close()
+				End If
+				
+				Exit Sub
+			End Try
+			
+			ThisApplication.ActiveDocument.Close(True)
+			
+			If noWrite <> True Then
+				oAppend.WriteLine("Printed")
+			End If
+			
+		Else
+			If noWrite <> True Then
+				oAppend.WriteLine("No Drawing found")
+			End If
+		End If
+		
+	Next
+	
+	oAppend.Flush()
+	oAppend.Close()
+	
+	MsgBox("Done")
+	
+End Sub 'Main
+
+Sub DwgPrint(PrinterName as String)
+	Dim oPrintMgr As DrawingPrintManager = ThisApplication.ActiveDocument.PrintManager
+	' Get the name of the printer that will be used.
+	oPrintMgr.Printer = PrinterName
+	
+	' Set to print in color.
+	oPrintMgr.ColorMode = kPrintColorPalette
+	
+	' Set to print one copies.
+	oPrintMgr.NumberOfCopies = 1
+	
+	' Set to print using portrait orientation.
+	oPrintMgr.Orientation = kPortraitOrientation
+	
+	' Set the paper size.
+	oPrintMgr.PaperSize = kPaperSize11x17
+	
+	' Set to print all sheets.
+	oPrintMgr.PrintRange = kPrintAllSheets
+	
+	' Set to print full scale.
+	oPrintMgr.ScaleMode = kPrintFullScale
+	
+	' Submit the print.
+	oPrintMgr.SubmitPrint
+	
+End Sub 'DwgPrint
+
+Sub DoCollect(FileNameDXF as String, copiedFileName as String)
+	If System.IO.File.Exists(FileNameDXF) Then 'search for single page drawings
+		System.IO.Directory.CreateDirectory(collectFolder)
+		My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName, Microsoft.VisualBasic.FileIO.UIOption.AllDialogs, Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing)
+	End If
+End Sub 'DoCollect
+
+Function FindDrawingFile(PartOrAssemblyDoc As Document)
+    Dim fullFilename As String
+    fullFilename = PartOrAssemblyDoc.fullFilename
+   
+    ' Extract the path from the full filename.
+    Dim path As String
+    path = "C:\_vaultWIP\Designs"
+   
+    ' Extract the filename from the full filename.
+    Dim filename As String
+    filename = Right$(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
+   
+    ' Replace the extension with "dwg"
+    filename = Left$(filename, InStrRev(filename, ".")) & "dwg"
+   
+    ' Find if the drawing exists.
+    Dim drawingFilename As String
+    drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+    ' Check the result.
+    If drawingFilename = "" Then
+        ' Try again with idw extension.
+        filename = Left$(filename, InStrRev(filename, ".")) & "idw"
+       
+        ' Find if the drawing exists.
+        drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+        ' Return the result.
+        If drawingFilename <> "" Then
+            FindDrawingFile = drawingFilename
+        Else
+            FindDrawingFile = ""
+        End If
+    Else
+        ' Return the result.
+        FindDrawingFile = drawingFilename
+    End If
+End Function 'FindDrawingFile
+
+Function FindDrawingFilePN(PartOrAssemblyDoc As Document)
+    Dim fullFilenamePN As String
+    fullFilenamePN = PartOrAssemblyDoc.fullFilename
+   
+    ' Extract the path from the full filename.
+    Dim path As String = "C:\_vaultWIP\Designs"
+    'path = Left$(fullFilenamePN, InStrRev(fullFilenamePN, "\"))
+   
+	Dim iProps as PropertySet = PartOrAssemblyDoc.PropertySets.Item("Design Tracking Properties")
+	Dim pn = iProps.Item("Part Number")
+	
+    Dim filename As String = pn.Value
+    'filename = Right$(fullFilenamePN, Len(fullFilenamePN) - InStrRev(fullFilenamePN, "\"))
+   
+    ' Replace the extension with "dwg"
+    filename = filename & ".dwg"
+   
+    ' Find if the drawing exists.
+    Dim drawingFilename As String
+    drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+    ' Check the result.
+    If drawingFilename = "" Then
+        ' Try again with idw extension.
+        filename = filename & "idw"
+       
+        ' Find if the drawing exists.
+        drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
+   
+        ' Return the result.
+        If drawingFilename <> "" Then
+            Return drawingFilename
+        Else
+            Return ""
+        End If
+    Else
+        ' Return the result.
+         Return drawingFilename
+    End If
+End Function 'FindDrawingFilePN
+
+Function isDwg(ThisDoc as Document) As Boolean
+	Debug.Print (ThisDoc.DocumentType)
+	If ThisDoc.DocumentType = kDrawingDocumentObject
+		isDwg = True
+	Else 
+		isDwg = False
+	End If
+End Function 'isDwg
+
+Function DocumentFileName(Doc As String) As String
+	DocumentFileName = Left(Doc, Doc.Length - 4)
+	'MsgBox(DocumentFileName)
+End Function 'DocumentFileName
+
+Function isAsm(ThisDoc As Document) As Boolean
+	Debug.Print (ThisDoc.DocumentType)
+	If ThisDoc.DocumentType = kAssemblyDocumentObject Then
+		isAsm = True
+	Else
+		isAsm = False
+	End If
+End Function 'isAsm
+
+Function BaseFilename(ByVal fullFilename As String) As String
+    Dim temp As String
+    temp = Right(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
+    BaseFilename = Left(temp, InStrRev(temp, ".") - 1)
+End Function 'BaseFilename
+
+Function FilePath(ByVal fullFilename As String) As String
+    FilePath = Left(fullFilename, InStrRev(fullFilename, "\"))
+End Function 'FilePath
+
+Function DocumentFileNameExt(Doc as Document) As String
+	DocumentFileNameExt = IO.Path.GetFileName(Doc.FullFileName)
+End Function 'DocumentFileNameExt
