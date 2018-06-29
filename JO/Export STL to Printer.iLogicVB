@@ -1,8 +1,14 @@
-﻿'declarations
+﻿Imports System.IO
+Imports System.IO.Path
+Imports System.Collections
+
+
+Sub Main()
+'declarations
 	Dim oDoc as Document
 	Dim compOcc as ComponentOccurrence
 	customPropertySet = ThisDoc.Document.PropertySets.Item("Inventor User Defined Properties")
-	Dim DirMgr = System.IO.Directory
+	'Dim DirMgr = System.IO.Directory
 	
 'Main
 	oDoc = ThisApplication.ActiveEditDocument
@@ -14,24 +20,25 @@
 		' Are we in a Assembly or Part Document?
 		If oDoc.DocumentType = kAssemblyDocumentObject Or oDoc.DocumentType = kPartDocumentObject Then
 			
-			Dim CurDate as Date = DateTime.Now 'pull current time
+			Dim CurDate as Date = DateTime.Now 'pull current date stamp		
 			
-			Dim folderDate as String			
+			strlongDate = CurDate.ToString("D")
 			
-			If CurDate.ToString("D").Contains.ToLower("saturday") Then
+			Dim folderDate as Date
+			
+			If strlongDate.Contains("Saturday") = True Then
 				folderDate = DateAndTime.DateAdd(DateInterval.Day, 2, CurDate)
-			Else If CurDate.ToString("D").Contains.ToLower("sunday") Then
+			Else If strlongDate.Contains("Sunday") = True Then
 				folderDate = DateAndTime.DateAdd(DateInterval.Day, 1, CurDate)
 			Else 
 				folderDate = CurDate
 			End If
 			
 			DateFolder = folderDate.ToString("yyyyMMdd")
-			
-			oPath = "C:\" & DateFolder & "\" ' "\\RD-Zeus\MultiJet Print Queue\" & DateFolder 'ThisDoc.Path
+			oPath = "\\RD-Zeus\MultiJet Print Queue\" & DateFolder 'ThisDoc.Path
 			System.IO.Directory.CreateDirectory(oPath)
 			
-			oFileName = IO.Path.GetFileNameWithoutExtension(oDoc.FileName)
+			oFileName = IO.Path.GetFileNameWithoutExtension(oDoc.FullFileName)
 			
 			oSTLAddIn = ThisApplication.ApplicationAddIns.ItemById("{81CA7D27-2DBE-4058-8188-9136F85FC859}")
 			oContext = ThisApplication.TransientObjects.CreateTranslationContext
@@ -73,3 +80,4 @@
 		MessageBox.Show("File must be saved to continue.", "File Not Saved",MessageBoxButtons.OK,MessageBoxIcon.Error)
 
 	End If
+End Sub
