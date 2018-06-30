@@ -8,13 +8,9 @@ Sub Main()
 	Dim oDoc as Document
 	Dim compOcc as ComponentOccurrence
 	customPropertySet = ThisDoc.Document.PropertySets.Item("Inventor User Defined Properties")
-	'Dim DirMgr = System.IO.Directory
 	
 'Main
 	oDoc = ThisApplication.ActiveEditDocument
-
-	' SharedVariable("LogVar") = "Export STL"
-	' iLogicVB.RunExternalRule("Write SV to Log.iLogicVB")
 	
 	If oDoc.FileSaveCounter >= 1 Then
 		' Are we in a Assembly or Part Document?
@@ -35,11 +31,13 @@ Sub Main()
 			End If
 			
 			DateFolder = folderDate.ToString("yyyyMMdd")
-			oPath = "\\RD-Zeus\MultiJet Print Queue\" & DateFolder 'ThisDoc.Path
+			'oPath = "C:\TESTING\" & DateFolder & "\" 
+			oPath = "\\RD-Zeus\MultiJet Print Queue\" & DateFolder
 			System.IO.Directory.CreateDirectory(oPath)
 			
 			oFileName = IO.Path.GetFileNameWithoutExtension(oDoc.FullFileName)
 			
+			'Get STL translator, and set options for export
 			oSTLAddIn = ThisApplication.ApplicationAddIns.ItemById("{81CA7D27-2DBE-4058-8188-9136F85FC859}")
 			oContext = ThisApplication.TransientObjects.CreateTranslationContext
 			oContext.Type = IOMechanismEnum.kFileBrowseIOMechanism
@@ -68,8 +66,11 @@ Sub Main()
 			oDataMedium.FileName = oPath & "\" & oFileName & ".stl"
 
 			'Publish document
-			oSTLAddIn.SaveCopyAs(oDoc, oContext, oOptions, oDataMedium)
-			
+			Try 
+				oSTLAddIn.SaveCopyAs(oDoc, oContext, oOptions, oDataMedium)
+			Catch
+				MessageBox.Show("There was an error saving the file.  Please make sure that the location " & oPath & " is available.  ", "Network access error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+			End Try
 		Else
 		
 			MessageBox.Show("This command can only be used in an Assembly or Part.")
