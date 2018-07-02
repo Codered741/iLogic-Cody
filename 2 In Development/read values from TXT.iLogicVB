@@ -13,7 +13,6 @@ Sub Main()
 	
 End Sub
 
-	
 Function ReadTXT(InputFile as String) As List(of String)
 	Dim RawList() as String
 	RawList = IO.File.ReadAllLines(InputFile)
@@ -39,31 +38,3 @@ Function ReadTXT(InputFile as String) As List(of String)
 	Return ReadTXT
 
 End Function
-
-
-	' Dim cmbDesigners As New List(of String)
-	' Dim Designers() As String
-	' 'Read the Props_Designers.txt file and populate cmbProjects and cmbCheckers list items
-	' Try
-		' Designers = IO.File.ReadAllLines("C:\Dropbox\Cody\Github\iLogic\2 In Development\Props_Designers.txt")
-		' Dim designerlist As New ArrayList()
-		
-		' For p As Integer = 0 To Designers.GetUpperBound(0)
-			' designerlist.Add(Designers(p))
-		' Next
-		
-		' Dim XDesigner As String
-		' For n = 0 To designerlist.Count - 1
-			' If designerlist.Item(n).ToString.Substring(0, 1) = "*" Then
-				' GoTo nOBJd
-			' End If
-			' XDesigner = designerlist.Item(n).ToString
-			' cmbDesigners.Add(XDesigner)
-			' 'cmbCheckers.Items.Add(XDesigner)
-' nOBJd:
-		' Next
-		
-	' Catch exc As Exception
-		' ' Report all errors.
-		' MsgBox("Error loading designer list")
-	' End Try
