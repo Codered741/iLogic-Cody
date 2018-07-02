@@ -1,0 +1,45 @@
+Private Sub Main
+	Dim oDoc As Document = ThisApplication.ActiveDocument
+	Randomize()
+	
+	Dim colorName As String
+	Dim Red as Byte
+	Dim Green As Byte
+	Dim Blue As Byte
+	
+	Red = CByte(255 * Rnd())
+	Green = CByte(255 * Rnd())
+	Blue = CByte(255 * Rnd())
+	
+	colorName = "RGB(" & Red & "," & Green & "," & Blue & ")"
+	CreateSimpleColorAppearance(oDoc, colorName, Red, Green, Blue)
+	
+End Sub
+
+
+Public Sub CreateSimpleColorAppearance(doc as Document, colorName as String, red as Byte, green as Byte, blue as Byte)
+    
+    ' Only document appearances can be edited, so that's what's created.
+    ' This assumes a part or assembly document is active.
+    Dim docAssets As Assets
+    docAssets = doc.Assets
+	
+    ' Create a new appearance asset.
+    Dim appearance As Asset
+    appearance = docAssets.Add( 99073, "Generic", colorName, colorName)
+	'99073 = AssetTypeEnum.kAssetTypeAppearance
+	
+    Dim tobjs As TransientObjects
+    tobjs = ThisApplication.TransientObjects
+
+    Dim color As ColorAssetValue
+    color = appearance.Item("generic_diffuse")
+    color.value = tobjs.CreateColor(red, blue, green)
+	
+    Dim floatValue As FloatAssetValue
+    floatValue = appearance.Item("generic_reflectivity_at_0deg")
+    floatValue.value = 0.5
+	
+    floatValue = appearance.Item("generic_reflectivity_at_90deg")
+    floatValue.value = 0.5
+End Sub
