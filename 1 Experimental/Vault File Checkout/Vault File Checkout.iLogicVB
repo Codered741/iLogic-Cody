@@ -7,10 +7,28 @@
 
 'DESCRIPTION: Check out specified file.  
 
+'https://forums.autodesk.com/t5/vault-customization/checking-in-and-out-a-file/m-p/4312060
+
 AddReference "C:\Program Files (x86)\Autodesk\Autodesk Vault 2017 SDK\bin\x64\Autodesk.DataManagement.Client.Framework.xml"
 
+Imports System.Drawing
+Imports System.Collections
+Imports System.ComponentModel
+Imports System.Windows.Forms
+Imports System.Data
+Imports System.Linq
+
+'wB added
+Imports System.IO
+
+Imports Autodesk.Connectivity.WebServices
+Imports Autodesk.Connectivity.WebServicesTools
+Imports VDF = Autodesk.DataManagement.Client.Framework
+
+
 Sub Main()
-	DownloadFiles()
+	'DownloadFiles()
+	GetCheckout()
 End Sub
 
 Public Sub DownloadFiles(fileIters As ICollection(Of VDF.Vault.Currency.Entities.FileIteration))
@@ -31,4 +49,48 @@ Public Sub DownloadFiles(fileIters As ICollection(Of VDF.Vault.Currency.Entities
 
        Dim results As VDF.Vault.Results.AcquireFilesResults = m_conn.FileManager.AcquireFiles(settings)
 
+End Sub
+
+
+Private Sub GetCheckout()
+	' For demonstration purposes, the information is hard-coded.
+	Dim results As VDF.Vault.Results.LogInResult = VDF.Vault.Library.ConnectionManager.LogIn("tait-ltz-edm01", "TAIT_TOWERS", "Guest", "Guest", VDF.Vault.Currency.Connections.AuthenticationFlags.Standard, Nothing)
+
+	If Not results.Success Then
+		MsgBox("Fail")
+		Return
+		
+	Else If 
+		MsgBox("No Fail")
+	End If
+
+	Dim connection As VDF.Vault.Currency.Connections.Connection = results.Connection
+
+	' Get the FileIteration 
+	Dim oFileIteration As VDF.Vault.Currency.Entities.FileIteration =
+									getFileIteration("12345 Testing XXXX.csv", connection)
+
+	'Dim fldrPath As Autodesk.DataManagement.Client.Framework.Currency.FolderPathAbsolute = connection.WorkingFoldersManager.GetWorkingFolder(oFileIteration)
+	Dim fldrPath As VDF.Currency.FolderPathAbsolute = New VDF.Currency.FolderPathAbsolute("c:\Temp")
+	Dim filePath As String = Path.Combine(fldrPath.ToString(), oFileIteration.EntityName)
+	Dim filePathAbs As VDF.Currency.FilePathAbsolute = New VDF.Currency.FilePathAbsolute(filePath)
+
+	'determine if the file exists
+	If Not System.IO.File.Exists(filePath) Then
+		MessageBox.Show("The file you are attempting to check in does not exist on disk.")
+		'Logout
+		VDF.Vault.Library.ConnectionManager.LogOut(connection)
+		Return
+	End If
+
+	If oFileIteration.IsCheckedOut = True Then
+
+		connection.FileManager.CheckinFile(oFileIteration, "wbTesting", False, New ACW.FileAssocParam() {},
+																		 Nothing, False, Nothing,
+											  ACW.FileClassification.None, False, filePathAbs)
+
+	End If
+
+	'Logout
+	VDF.Vault.Library.ConnectionManager.LogOut(connection)
 End Sub
