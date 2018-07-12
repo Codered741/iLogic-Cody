@@ -1,0 +1,70 @@
+Dim oDoc as PartDocument
+oDoc = ThisApplication.ActiveEditDocument
+
+Dim oCompDef as ComponentDefinition
+oCompDef = oDoc.ComponentDefinition
+
+Dim oFace As Face
+Do
+	oFace = ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFaceFilter, "Select the top FACE")
+Loop While oFace Is Nothing
+
+Dim oEdge As Edge
+Dim oEdgeLoop As EdgeLoop
+Dim oCutCorners as ObjectCollection
+oCutCorners = ThisApplication.TransientObjects.CreateObjectCollection
+'Dim oSketchPointCollection As ObjectCollection
+'oSketchPointCollection = ThisApplication.TransientObjects.CreateObjectCollection
+
+On Error Resume Next
+
+' 'find all points on designated plane that are created byt internal edge loops
+For Each oEdgeLoop In oFace.EdgeLoops
+	If oEdgeLoop.IsOuterEdgeLoop = False Then
+		For Each oEdge In oEdgeLoop.Edges
+			If Not oEdge Is Nothing Then
+				oCutCorners.Add(oEdge)
+			End If
+			msgbox(oCutCorners.Count)
+			' oHole1 = Nothing
+			' oHole2 = Nothing
+			
+			' oHole1 = oRoughDogBoneSketch.AddByProjectingEntity(oEdge.StartVertex)
+			' oHole2 = oRoughDogBoneSketch.AddByProjectingEntity(oEdge.StopVertex)
+			
+			' If Not oHole1 Is Nothing Then
+				' oSketchPointCollection.Add(oHole1)
+			' End If
+			
+			' If Not oHole2 Is Nothing Then
+				' oSketchPointCollection.Add(oHole2)
+			' End If
+		Next
+	End If
+Next
+On Error GoTo 0
+
+'add fillets to inner loop edges, only for curved faces.  
+' On Error Resume Next
+    ' For Each oEdgeLoop In oFace.EdgeLoops'iterate through edge loops
+        ' If oEdgeLoop.IsOuterEdgeLoop = False Then ' select only inner edge loops
+            ' For Each oEdge In oEdgeLoop.Edges ' iterate through edges
+                ' If oEdge.GeometryType = kCircularArcCurve Then  ' select only circular arc edges
+                    ' For Each oPlaneFace In oEdge.Faces ' iterate through faces
+                        ' If oPlaneFace.SurfaceType = kPlaneSurface Then ' select only planar faces
+                            ' For Each oCircEdge In oPlaneFace.Edges ' iterate through circular face edges
+                                ' If oCircEdge.CurveType <> kLineCurve Then' select only cirle curves
+                                    ' oCircleEdges.Add(oCircEdge) ' add to list
+                                ' End If
+                            ' Next
+                        ' End If
+                    ' Next
+                ' End If
+            ' Next
+        ' End If
+    ' Next
+  ' On Error GoTo 0
+  
+  
+
+  oCompDef.Features.FilletFeatures.AddSimple(oCutCorners, 1)
