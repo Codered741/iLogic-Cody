@@ -1,4 +1,6 @@
-﻿'highlighter colors
+﻿'Author: Cody Redding
+'contact: codered741@gmail.com
+
 'Runs in an Assembly to give all first level components a random color.  
 'Procedure:
 ' Get all first level components
@@ -18,6 +20,10 @@ Sub Main()
 	Dim dPCViewRep As DesignViewRepresentation 
 	Dim oOccs as ComponentOccurrencesEnumerator
 	Dim PCVRepOn as Boolean = False
+	Dim UsedColors as New List(of Integer)
+	Dim BreakLoop as Integer ' used to prevent possible infinite loop
+	Dim ColorsCount as Integer = 194
+	
 	Try
 		dPCViewRep = dViewReps.Item(vRepName)
 	Catch 
@@ -37,30 +43,50 @@ Sub Main()
     iColorCount = oAsmDoc.RenderStyles.Count
 	
 	If oAsmDoc.AllReferencedDocuments.Count > 50 Then
-		uCont = MessageBox.Show("This assembly has a large number of parts.  This operation may take considerable time.  Are you sure you want to continue?", "Inventor", MessageBoxButtons.OKCancel, MessageBoxIcon.Question)
+		uCont = MessageBox.Show("This assembly has a large number of parts.  This operation may take some time.  Are you sure you want to continue?", "iLogic", MessageBoxButtons.OKCancel, MessageBoxIcon.Question)
 		If uCont = vbCancel Then
 			Exit Sub
 		End If
 	End If
+	
+	If oAsmDoc.AllReferencedDocuments.Count > ColorsCount Then '194 RAL colors
+		uCont = MessageBox.Show("This assembly has more parts than available distinct colors.  The operation will be canceled.  ", "iLogic", MessageBoxButtons.OK, MessageBoxIcon.Error)
+		Exit Sub
+	End If
+	
+	
 		
 	For Each refDoc in oAsmDoc.AllReferencedDocuments
 		If refDoc.DocumentType = kPartDocumentObject Then
 			oOccs = oAsmDef.Occurrences.AllReferencedOccurrences(refDoc)
 		
+			BreakLoop = 0
+		
 		loop1:
 
 			pColor = Int((iColorCount * Rnd) + 1)
 			
-			If oAsmDoc.RenderStyles.Item(pColor).Name.Contains("RAL") Then
+			If oAsmDoc.RenderStyles.Item(pColor).Name.Contains("RAL") OrElse UsedColors.Contains(pColor) Then
 				'Do nothing
 			Else
-				'pColor = Int((iColorCount * Rnd) + 1)
-				GoTo loop1 'pick a new color, until a RAL color is selected.  
+				
+				BreakLoop += 1
+				
+				If BreakLoop > ColorsCount Then
+					MessageBox.Show("An error occurred, please try again", "iLogic Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+					Exit Sub
+				End If
+				
+				GoTo loop1 'pick a new color, until an unused RAL color is selected.  
+				
 			End If
 			
 			For Each oOcc In oOccs
 				oOcc.SetRenderStyle(kOverrideRenderStyle, oAsmDoc.RenderStyles.Item(pColor))
 			Next
+			
+			UsedColors.Add(pColor)
+			
 		End If
 	Next
 	
