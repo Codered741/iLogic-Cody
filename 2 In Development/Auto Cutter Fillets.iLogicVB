@@ -22,10 +22,13 @@ On Error Resume Next
 For Each oEdgeLoop In oFace.EdgeLoops
 	If oEdgeLoop.IsOuterEdgeLoop = False Then
 		For Each oEdge In oEdgeLoop.Edges
-			If Not oEdge Is Nothing Then
-				oCutCorners.Add(oEdge)
-			End If
-			msgbox(oCutCorners.Count)
+			'If oEdge.CurveType = kLineCurve Then
+				If Not oEdge Is Nothing Then
+					msgbox(oEdge.CurveType)
+					oCutCorners.Add(oEdge)
+				End If
+			'End If
+			
 			' oHole1 = Nothing
 			' oHole2 = Nothing
 			
