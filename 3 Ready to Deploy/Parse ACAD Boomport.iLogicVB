@@ -1,0 +1,26 @@
+Sub Main ()
+	Dim oDoc as Document  = ThisApplication.ActiveDocument
+	Dim strConcat as String = iProperties.Value("Project", "Part Number")
+	Dim fileName as String
+	Dim fileExt as String
+	If oDoc.DocumentType = kAssemblyDocumentObject Then
+		fileExt = ".iam"
+	Else If oDoc.DocumentType = kPartDocumentObject Then
+		fileExt = ".ipt"
+	Else
+		MsgBox("This rule only works in Parts and Assemblies.  ")
+		Exit Sub
+	End If
+	
+	
+	iProperties.Value("Project", "Description") = Right(strConcat, strConcat.Length - 7)
+	iProperties.Value("Project", "Part Number") = Left(strConcat, 7)
+	MessageBox.Show("Original Part Number: " & strConcat & vbLf & _
+		"New Part Number: " & iProperties.Value("Project", "Part Number") & vbLf & _ 
+		"New Description: " & iProperties.Value("Project", "Description"), "Parsed Data", MessageBoxButtons.OK)
+	
+	fileName = "C:\_vaultWIP\Designs\Library\" & iProperties.Value("Project", "Part Number") & fileExt
+	
+	oDoc.SaveAs(fileName, False)
+	
+End Sub

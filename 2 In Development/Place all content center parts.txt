@@ -1,0 +1,58 @@
+Sub Main()
+PlaceContentCenterPart()
+End Sub
+
+Sub PlaceContentCenterPart()
+
+    ' Set a reference to the active assembly document.
+    Dim oDoc As AssemblyDocument
+    oDoc = ThisApplication.ActiveDocument
+
+    ' Set a reference to the ContentCenter object.
+    Dim oContentCenter As ContentCenter
+    oContentCenter = ThisApplication.ContentCenter
+
+    ' Get the content node (category) "Fasteners:Bolts:Hex Head"
+    Dim oContentNode As ContentTreeViewNode
+    oContentNode = oContentCenter.TreeViewTopNode.ChildNodes.Item("Fasteners").ChildNodes.Item("Bolts").ChildNodes.Item("Hex Head")
+
+    ' Get the "ISO 4015" Family object.
+    Dim oFamily As ContentFamily
+    For Each oFamily In oContentNode.Families
+        If oFamily.DisplayName = "ISO 4015" Then
+            Exit For
+        End If
+    Next
+
+    ' Create a member based on the first row of the family.
+    Dim Error1 As MemberManagerErrorsEnum
+    Dim strContentPartFileName As String
+    Dim strErrorMessage As String
+    strContentPartFileName = oFamily.CreateMember(1, Error1, strErrorMessage)
+
+   ' Dim oMat As Matrix
+   ' oMat = ThisApplication.TransientGeometry.CreateMatrix
+
+    ' Insert an instance of the content center member in the assembly.
+    'Call oDoc.ComponentDefinition.Occurrences.Add(strContentPartFileName, oMat)
+    ' Set a reference to the transient geometry object.
+    Dim oAsmCompDef As AssemblyComponentDefinition
+	oAsmCompDef = ThisApplication.ActiveDocument.ComponentDefinition
+	Dim oTG As TransientGeometry
+	oTG = ThisApplication.TransientGeometry
+		
+	' Create a matrix.  
+	Dim oMatrix As Matrix
+	oMatrix = oTG.CreateMatrix
+
+	'Iterate through all of the occurrences
+	Dim oOccurrence As ComponentOccurrence
+
+	'place an instance of the component 
+	'in this case at 0,0,0
+	'positioned at the co-ordinates
+	oMatrix.SetTranslation(oTG.CreateVector(0, 0, 0)) 
+
+	oOccurrence = oAsmCompDef.Occurrences.Add(strContentPartFileName, oMatrix) 
+	oOccurrence.Grounded = False
+End Sub
