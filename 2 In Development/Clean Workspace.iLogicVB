@@ -5,28 +5,57 @@ Imports System.Text
 Sub Main
 	oDoc = ThisDoc.Document
 	Dim SearchLocation As String = "C:\_vaultWIP\Designs"
-	Dim filelist As New List(Of String)
-	GetAllReadOnlyFiles(SearchLocation, filelist)
+	Dim FileList as New List(Of String)
+	Dim oAppend As System.IO.StreamWriter
+	Dim oFile As String = "C:\_vaultWIP\DELETEME\Janitor.log"
+	
+	usrChoice = MessageBox.Show("Select 'Yes' if you want to clean checked in files.  Select 'No' if you want to clean files NOT in Vault. ", "Select file types", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question)
+	If usrChoice = vbYes Then
+		GetAllReadOnlyFiles(SearchLocation, FileList)
+	Else If usrChoice = vbNo Then
+		GetAllReadWriteFiles(SearchLocation, FileList)
+	Else
+		MsgBox("Canceling!")
+		Exit Sub
+	End If
 	
 	If filelist.count > 0 Then
-		i = MessageBox.Show(filelist.count & " Read-Only file(s) found - Do you Want to Delete Them?" & vbLf & vbLf & _
-	 "Note: Make sure there are no files checked-out to you before proceding." & vbLf & vbLf & _
-	 "It cannot be guaranteed that read-only files are actually checked into Vault and exist in the Vault database", _
-	  "iLogic",MessageBoxButtons.YesNo,MessageBoxIcon.Question)
+	
+		oAppend = IO.File.AppendText(oFile)
+		
+		i = MessageBox.Show(filelist.count & answer & " file(s) found - Do you want to delete them?", "iLogic", MessageBoxButtons.YesNo, MessageBoxIcon.Question)
 	 	If i = vbNo Then
 	 		Return
+		Else 
+			Dim TrashDir as String = Left(SearchLocation, InStrRev(SearchLocation, "\")) & "DELETEME\"
+			
+			System.IO.Directory.CreateDirectory(TrashDir)
+			
+			Dim NewFile as String
+			For Each strfile As String In filelist
+			
+				System.IO.File.SetAttributes(strfile, IO.FileAttributes.Normal)
+				
+				NewFile = TrashDir & Right(strFile, strFile.Length - InStrRev(strFile, "\"))
+				'msgBox(NewFile)
+				'System.IO.File.Move(strFile, NewFile)
+				oAppend.WriteLine(NewFile)
+				
+			Next
 	 	End If
+		
+		oAppend.Flush()
+		oAppend.Close()
+		
+		ThisDoc.Launch(oFile)
+		
 	Else
 	 
-	 MessageBox.Show("Your " & SearchLocation & " folder appears to be CLEANED. All Read-Only files were deleted.", "iLogic")
-	 Return
-	 
+		MessageBox.Show("Your " & SearchLocation & " folder appears to be CLEANED. No files were found.", "iLogic")
+		Return
+	
 	End If
-	 
-	For Each strfile As String In filelist
-		System.IO.File.SetAttributes(strfile, IO.FileAttributes.Normal)
-		System.IO.File.Delete(strfile)
-	Next
+	
 End Sub
 
 Sub GetAllReadOnlyFiles(ByVal SearchLocation As String, ByRef filelist As List(Of String))
@@ -39,9 +68,30 @@ Sub GetAllReadOnlyFiles(ByVal SearchLocation As String, ByRef filelist As List(O
         Next
         
         For Each dir As String In Directory.GetDirectories(SearchLocation)
-            If Not dir.Contains("_V") Then
+            If dir.Contains("_V") = False AndAlso dir.Contains("OldVersions") = False Then
                 Try
                     GetAllReadOnlyFiles(dir, filelist)
+                Catch
+                End Try
+            Else
+            End If
+        Next
+        
+End Sub
+
+Sub GetAllReadWriteFiles(ByVal SearchLocation As String, ByRef filelist As List(Of String))
+    
+        For Each file As String In Directory.GetFiles(SearchLocation)
+            Dim attributes = IO.File.GetAttributes(file)
+               If Not ((attributes And FileAttributes.ReadOnly) = FileAttributes.ReadOnly) Then    
+                filelist.add(file)
+            End If
+        Next
+        
+        For Each dir As String In Directory.GetDirectories(SearchLocation)
+            If dir.Contains("_V") = False AndAlso dir.Contains("OldVersions") = False Then
+                Try
+                    GetAllReadWriteFiles(dir, filelist)
                 Catch
                 End Try
             Else
