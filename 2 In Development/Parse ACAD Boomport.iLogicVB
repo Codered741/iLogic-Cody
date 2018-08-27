@@ -1,2 +1,0 @@
-Sub Main ()
-	iProperties.Value("Project", "Description") = Right(iProperties.Value("Project", "Part Number")
