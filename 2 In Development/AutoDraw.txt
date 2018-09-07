@@ -35,7 +35,7 @@ Sub Main()
 		Dim ModelDocName As String 
 		ModelDocName = ThisDoc.FileName(False) 'without extension
 		
-		ModelDwgDoc = CreateDrawing_PlaceViews (ModelDocName, DrawingViewScale, "Top_Right_Project", oBaseView, oRightSideView, oProjectView, oView4)
+		ModelDwgDoc = CreateDrawing_PlaceViews(ModelDocName, DrawingViewScale, "Top_Right_Project", oBaseView, oRightSideView, oProjectView, oView4)
 		Dim oBW as Double
 		Dim oBH As Double
 		oBW = oBaseView.Width
