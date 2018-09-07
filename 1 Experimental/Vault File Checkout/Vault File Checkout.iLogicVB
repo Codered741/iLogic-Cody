@@ -2,12 +2,12 @@
 'CONTACT: Codered741@gmail.com
 'LAST MODIFIED: 20171031
 
-'STATUS: Experimental
-'LICENSE: Free to redistribute without authorization
 
 'DESCRIPTION: Check out specified file.  
 
 'https://forums.autodesk.com/t5/vault-customization/checking-in-and-out-a-file/m-p/4312060
+
+'NOTE: vault server name and Vault name removed.  
 
 AddReference "C:\Program Files (x86)\Autodesk\Autodesk Vault 2017 SDK\bin\x64\Autodesk.DataManagement.Client.Framework.xml"
 
@@ -54,7 +54,7 @@ End Sub
 
 Private Sub GetCheckout()
 	' For demonstration purposes, the information is hard-coded.
-	Dim results As VDF.Vault.Results.LogInResult = VDF.Vault.Library.ConnectionManager.LogIn("tait-ltz-edm01", "TAIT_TOWERS", "Guest", "Guest", VDF.Vault.Currency.Connections.AuthenticationFlags.Standard, Nothing)
+	Dim results As VDF.Vault.Results.LogInResult = VDF.Vault.Library.ConnectionManager.LogIn(oVaultServer, oVaultName, "Guest", "Guest", VDF.Vault.Currency.Connections.AuthenticationFlags.Standard, Nothing)
 
 	If Not results.Success Then
 		MsgBox("Fail")
