@@ -1,0 +1,10 @@
+'https://forums.autodesk.com/t5/inventor-customization/add-area-of-flat-to-bill-of-material/td-p/8248197
+
+Sub Main()
+	Dim oDoc as Document = ThisApplication.ActiveDocument
+	Dim oCompDef as ComponentDefinition = oDoc.ComponentDefinition
+	Dim oFace as Face = oCompDef.FlatPattern.BottomFace
+	Dim FaceArea As Decimal = oFace.Evaluator.Area
+	MsgBox(FaceArea)
+	'MsgBox(ThisApplication.ActiveDocument.ComponentDefinition.FlatPattern.BottomFace.Evaluator.Area)
+End Sub

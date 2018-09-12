@@ -1,0 +1,101 @@
+﻿'List of Variables    
+	Dim oDrawingDoc As Inventor.DrawingDocument
+	Dim oTitle As TitleBlockDefinition
+	Dim oSheet As Sheet
+	Dim oSymbol As SketchedSymbol
+	Dim oSymbolDef As SketchedSymbolDefinition
+	Dim oSourceDoc As Inventor.DrawingDocument
+	Dim oTargetDoc As Inventor.DrawingDocument
+	Dim oTBdef As TitleBlockDefinition
+	Dim oTBdefs As TitleBlockDefinitions
+
+'Selects this document
+	oDrawingDoc = ThisApplication.Documents.ItemByName(SharedVariable("IterFile")) 'ThisApplication.ActiveDocument
+
+'Deletes active title block from sheet
+	oDrawingDoc.ActiveSheet.TitleBlock.Delete
+
+'Deletes ALL old Title Blocks.	
+	For Each oTitle In oDrawingDoc.TitleBlockDefinitions
+       	If oTitle.IsReferenced = False Then
+    		oTitle.Delete
+        End If
+	Next
+
+'Deletes old Work In Progress Stamp on all sheets.
+	For Each oSheet In oDrawingDoc.Sheets
+	'find the symbol by name on sheet
+		For Each oSymbol In oSheet.SketchedSymbols
+			If oSymbol.Name = "WORK IN PROGRESS STAMP" Then
+				oSymbol.Delete
+			End If
+		Next
+	Next
+	
+'Deletes old Work in Progress Stamp in Sketch Symbols	
+	For Each oSymbolDef In oDrawingDoc.SketchedSymbolDefinitions
+		If oSymbolDef.Name = "WORK IN PROGRESS STAMP" Then
+  			oSymbolDef.Delete
+		End If  
+	Next
+
+'Sets Source Document to current new template.
+	oSourceDoc = ThisApplication.Documents.Open("\\canopus\cad\CADsettings_Inventor 2016\Templates\CLS_Drawing_Sheet.idw", False)
+	oTargetDoc = oDrawingDoc 'ThisDrawing.Document
+	oTBdefs = oSourceDoc.TitleBlockDefinitions
+	'oBorderDefs = oSourceDoc.BorderDefinitions
+	'oSymbols = oSourceDoc.SketchedSymbolDefinitions
+	
+'Check to see if Custom Iproperty Todays's Date exists, creates it if it is not in document.	
+	Dim oDesProps as Inventor.PropertySet = oDrawingDoc.PropertySets.Item("Design Tracking Properties")
+	Dim oPartNumber as Inventor.Property = oDesProps.Item("Part Number")
+	Dim TodaysDate As String = oPartNumber.Value 'iProperties.Value("Project", "Part Number")
+	Dim oProName As String = "Today's Date"
+	Dim oProSet As Inventor.PropertySet = oDrawingDoc.PropertySets.Item("User Defined Properties")
+'Look for custom iproperty and try to use it
+	Dim oProp As Inventor.Property
+		Try
+  	  		oProp = oProSet.Item(oProName)
+		Catch
+    	' iProperty not found , create and assign value
+	  	  oProp = oProSet.Add("",oProName)
+		End Try
+			oProp.Expression = TodaysDate
+
+'Set the Today's Date custom .idw iproperty to the current date
+	oProp.Value = Now
+	
+'Inserts New Title Blocks into Title Block Drawing Resources.	
+	For Each oTBdef In oTBdefs
+		Try
+			If oTBdef.Name <> "ANSI - Large" Then
+				oTBdef.CopyTo(oTargetDoc, True)
+			End If
+		Catch
+			MsgBox("Unknown error in copy title block for " & Chr(34) & oTBdef.Name & Chr(34),vbOKOnly,"Error")
+		End Try
+	Next
+
+Dim oTBDef2 as TitleBlockDefinition
+'Insert size of title block based on current sheet size.
+	If oDrawingDoc.ActiveSheet.Size = DrawingSheetSizeEnum.kADrawingSheetSize Then 'A
+		oTBDef2 = oDrawingDoc.TitleBlockDefinitions.Item("CLS_ANSI_A")
+	ElseIf oDrawingDoc.ActiveSheet.Size = DrawingSheetSizeEnum.kBDrawingSheetSize Then
+		oTBDef2 = oDrawingDoc.TitleBlockDefinitions.Item("CLS_ANSI_B")
+	ElseIf oDrawingDoc.ActiveSheet.Size = DrawingSheetSizeEnum.kCDrawingSheetSize Then
+		oTBDef2 = oDrawingDoc.TitleBlockDefinitions.Item("CLS_ANSI_C")
+	ElseIf oDrawingDoc.ActiveSheet.Size = DrawingSheetSizeEnum.kDDrawingSheetSize Then
+		oTBDef2 = oDrawingDoc.TitleBlockDefinitions.Item("CLS_ANSI_D-E")
+	ElseIf oDrawingDoc.ActiveSheet.Size = DrawingSheetSizeEnum.kEDrawingSheetSize Then
+		oTBDef2 = oDrawingDoc.TitleBlockDefinitions.Item("CLS_ANSI_D-E")
+	End If	
+	oDrawingDoc.ActiveSheet.AddTitleBlock(oTBDef2)
+	
+'Turns off Master Record Layer and Turns on Work In Progress layer.
+	oDrawingDoc.StylesManager.Layers("Master Record").Visible = False
+	oDrawingDoc.StylesManager.Layers("WORK IN PROGRESS").Visible = True
+
+oDrawingDoc.Update
+oSourceDoc.Close
+
+ 'InventorVb.DocumentUpdate()

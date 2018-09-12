@@ -1,0 +1,43 @@
+'push quantity to iProperty
+'https://forums.autodesk.com/t5/inventor-customization/ilogic-setting-iproperty-value-to-parts-only-bom-quantity/td-p/8228783
+
+Sub Main()
+	
+	Dim i as Long
+	Dim oDoc as AssemblyDocument = ThisApplication.ActiveDocument
+	Dim oBom as BOM = oDoc.ComponentDefinition.BOM
+	
+	oBOM.PartsOnlyViewEnabled = True
+	Dim oBOMView as BOMView = oBOM.BOMViews.Item("Parts Only")
+	
+	
+	
+	'assigned in loop
+	Dim oRow as BOMRow
+	Dim oCompDef as ComponentDefinition
+	Dim oPropSet as PropertySet
+	Dim pQty as Inventor.Property
+	Dim oBOMDoc as Document
+	
+	For Each oRow In oBOMView.BOMRows 'i=1 To oBOMView.BOMRows.Count
+		'oRow = oBOMView.BOMRows.Item(i)
+		oCompDef  = oRow.ComponentDefinitions.Item("1")
+		MsgBox("1")
+		oBOMDoc = oCompDef.Document
+		oPropSet = oBOMDoc.PropertySets.Item("Inventor User Defined Properties")
+		
+		Try 
+			pQty = oPropSet.Item("Assy Qty")
+		Catch 
+			oPropSet.Add("Custom", "Assy Qty")
+			
+			pQty = oPropSet.Item("Assy Qty")
+			
+		End Try
+		
+		pQty.Value = oRow.TotalQuantity
+		
+	Next
+		
+		
+End Sub

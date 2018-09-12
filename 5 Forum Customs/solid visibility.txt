@@ -1,0 +1,38 @@
+'https://forums.autodesk.com/t5/inventor-customization/solidbody-visibility/td-p/8252205
+
+'catch and skip errors
+On Error Resume Next
+'define the active assembly
+Dim oAssyDoc As AssemblyDocument
+oAssyDoc = ThisApplication.ActiveDocument
+'define Sb as solidbodies
+Dim SB As SurfaceBody
+'define ShellB as a surfacebodies
+Dim ShellB As WorkSurface
+'define Vis and Vis2 as boolean type
+Dim Vis As Boolean
+Dim Vis2 As Boolean
+
+'choose solid or surface bodies
+If solidOrShell = "Solid" Then
+	Vis = True
+	Vis2 = False
+Else If solidOrShell = "Shell" Then
+	Vis = False
+	Vis2 = True
+
+End If
+
+Dim oDoc As Inventor.Document
+
+For Each oDoc In oAssyDoc.AllReferencedDocuments
+    If somecriteria = True Then
+		For Each SB In oDoc.ComponentDefinition.SurfaceBodies
+			SB.Visible = Vis
+		Next
+		For Each ShellB In oDoc.ComponentDefinition.WorkSurfaces
+			ShellB.Visible = Vis2
+			Next
+	End If
+Next
+ThisApplication.ActiveDocument.Update

@@ -1,0 +1,91 @@
+'https://forums.autodesk.com/t5/inventor-customization/run-a-collection-of-ilogic-rules-on-all-network-drawings/td-p/8243984
+
+Sub Main()
+	On Error Goto close 'Resume Next
+	
+	'setup to read in the log file
+	Dim oFile As String = "C:\TEMP\UpdateLog.Log"
+	Dim oReader as System.IO.StreamReader = New System.IO.StreamReader(oFile)
+	Dim DoneList as String
+	Dim line as String
+	
+	'read in log file
+	Do
+		line = oReader.ReadLine()
+		DoneList = DoneList & line
+	Loop Until line Is Nothing
+	
+	'close log for reader
+	oReader.Close()
+	
+	'setup to search for new files
+	Dim SearchString = "C:\SearchPath\"
+	Dim Folder As New IO.DirectoryInfo(SearchString)
+	Dim FileList as New List(of String)
+	
+	'search for files, filtering files from "OldVersions", and files already in the "done" list
+	For Each File as IO.FileInfo in Folder.GetFiles("*.idw",IO.SearchOption.AllDirectories)
+		If File.FullName.Contains("OldVersions") = False AndAlso DoneList.Contains(File.FullName) = False Then
+			FileList.Add(File.FullName)
+		End If
+	Next
+	
+	'display files found by search, exit if 0
+	If FileList.Count > 0 Then
+		MsgBox(FileList.Count & " files were found")
+	Else
+		MsgBox("No more files were found.  ")
+		Exit Sub
+	End If
+	
+	'setup to open files and log
+	Dim oDoc as Document
+	Dim oAppend As System.IO.StreamWriter
+	
+	'Try
+		oAppend = IO.File.AppendText(oFile)
+	If Err.Number <> 0'Catch
+		Goto close
+	End If 'End Try
+	
+	'setup options for drawing open
+	Dim oOptions as NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap
+	'change these to false if you need to open and update from model.  
+	oOptions.Value("DeferUpdates") = True
+	oOptions.Value("FastOpen") = True
+	
+	'make modifications
+	For Each DocName As String In FileList
+		
+		'open the document
+		oDoc = ThisApplication.Documents.OpenWithOptions(DocName, oOptions, True)
+		
+		'post the document name to shared variable for use by other rules
+		SharedVariable("IterFile") = DocName
+		'msgBox(DocName)
+		'run the rule to make the changes
+		iLogicVB.RunExternalRule("UpdateOldTitleBlock")
+		
+		'record that the changes were made
+		oAppend.WriteLine(DocName) 
+		
+		'save and close the drawing.  
+		oDoc.Save
+		oDoc.Close(False)
+		
+	Next
+
+	
+	MsgBox("Done!")
+	
+close:
+	'close the writer when done
+	oReader.Close()
+	oAppend.Close()	
+	
+	If Err.Number <> 0 Then
+		MsgBox("Error")
+	End If
+	
+End Sub
+
