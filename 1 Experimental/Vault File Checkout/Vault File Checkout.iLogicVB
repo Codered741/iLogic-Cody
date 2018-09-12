@@ -24,11 +24,23 @@ Imports System.IO
 Imports Autodesk.Connectivity.WebServices
 Imports Autodesk.Connectivity.WebServicesTools
 Imports VDF = Autodesk.DataManagement.Client.Framework
+Dim oVaultServer as String
+Dim oVaultName as String
 
 
 Sub Main()
 	'DownloadFiles()
-	GetCheckout()
+	ReadLogin("C:\Dropbox\Cody\Github\iLogic-Cody\Secrets\TaitVault.txt")
+	GetCheckout(oVaultServer, oVaultName)
+End Sub
+
+Sub ReadLogin(LoginFile as String)
+	Dim oReader as System.IO.StreamReader = New System.IO.StreamReader(LoginFile)
+	Dim Raw as String = oReader.ReadLine()
+	oReader.Close()
+	
+	oVaultServer = Right(Raw, InStr(Raw, "|"))
+	oVaultName = Left(Raw, InStrRev(Raw, "|"))
 End Sub
 
 Public Sub DownloadFiles(fileIters As ICollection(Of VDF.Vault.Currency.Entities.FileIteration))
@@ -52,7 +64,7 @@ Public Sub DownloadFiles(fileIters As ICollection(Of VDF.Vault.Currency.Entities
 End Sub
 
 
-Private Sub GetCheckout()
+Private Sub GetCheckout(oVaultServer as String, oVaultName as String)
 	' For demonstration purposes, the information is hard-coded.
 	Dim results As VDF.Vault.Results.LogInResult = VDF.Vault.Library.ConnectionManager.LogIn(oVaultServer, oVaultName, "Guest", "Guest", VDF.Vault.Currency.Connections.AuthenticationFlags.Standard, Nothing)
 
