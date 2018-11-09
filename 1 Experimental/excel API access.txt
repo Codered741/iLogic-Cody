@@ -1,0 +1,54 @@
+AddReference "Microsoft.Office.Interop.Excel"
+
+Sub Main()
+
+	Dim PnWb as String = "R:\DISNEY PROJECT KAPPA - 17-A-0059\X-REF MASTER FILES\Disney Part Numbers.xlsx"
+	
+	Dim xlApp as Microsoft.Office.Interop.Excel.Application
+	
+	On Error Resume Next
+	
+	Dim openedByRule as Boolean = False
+	
+	xlApp = GetObject(, "Microsoft.Office.Interop.Excel.Application")
+	
+	If Err.Number <> 0 Then
+		Err.Clear
+		
+		xlApp = CreateObject("Excel.Application")
+		openedByRule = True
+		
+		If Err.Number <> 0 Then	
+			MsgBox("Cannot access Excel")
+			Exit Sub
+		End If
+		
+	End If
+	
+	xlApp.Visible = True
+	
+	Dim wb as Microsoft.Office.Interop.Excel.Workbook = xlApp.Workbooks.Open(PnWb)
+	
+	If Err.Number <> 0 Then
+		MsgBox("Unable to open the file.  Error: " & Err.Number & " - " & Err.Description)
+		Exit Sub
+	End If
+	
+	Dim ws as Microsoft.Office.Interop.Excel.Worksheet = wb.Worksheets.Item("Parts")
+	
+	If Err.Number <> 0 Then
+		MsgBox("Unable to get the sheet")
+		Exit Sub
+	End If 
+
+	MsgBox(ws.Cells(2,3).Value)
+	
+	ws.Cells(2,5) = "Test123"
+	
+	wb.Close(True) 
+	
+	If openedByRule = True
+		xlApp.Quit
+	End If
+	
+End Sub

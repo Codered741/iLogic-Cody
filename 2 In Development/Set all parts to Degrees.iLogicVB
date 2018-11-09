@@ -1,0 +1,46 @@
+'Change all angle UOM to degrees
+
+'UnitsTypeEnum.kDegreeAngleUnits
+
+Sub Main()
+	If ThisApplication.ActiveEditDocument.DocumentType = kAssemblyDocumentObject Then
+		Dim oDoc as AssemblyDocument = ThisApplication.ActiveEditDocument
+	Else
+		MessageBox.Show("Run from Assembly")
+		Exit Sub
+	End If 
+	
+	Dim missed as New List(Of String)
+	
+	For Each Doc As Document In oDoc.AllReferencedDocuments
+		If Doc.ReadOnly = False Then
+			Doc.UnitsOfMeasure.AngleUnits = UnitsTypeEnum.kDegreeAngleUnits
+			Doc.Rebuild
+		Else
+			missed.Add(Doc.FullFileName)
+		End If
+	Next 
+	
+	If missed.Count > 0 Then
+		MessageBox.Show("The following files were missed: " & vbCrlf & _
+			missed, "missed")
+End Sub
+
+
+
+	' Dim docFile As Document
+	' For Each docFile In oDoc.AllReferencedDocuments                
+		' 'format  file name                   
+		' Dim FNamePos As Long
+		' FNamePos = InStrRev(docFile.FullFileName, "\", -1)                        
+		' Dim docFName As String 
+		' docFName = Right(docFile.FullFileName, Len(docFile.FullFileName) - FNamePos)      
+		' 'set length units
+		' 'docFile.unitsofmeasure.LengthUnits = oUOM_1
+		' 'set mass units
+		' 'docFile.unitsofmeasure.MassUnits = oUOM_2
+		' 'set precision
+		' 'docFile.unitsofmeasure.LengthDisplayPrecision = oPrecision
+		' 'rebuild to update the display
+		' 'docFile.Rebuild
+	' Next     

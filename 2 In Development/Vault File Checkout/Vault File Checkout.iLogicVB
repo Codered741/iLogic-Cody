@@ -9,6 +9,11 @@
 
 'NOTE: vault server name and Vault name removed.  
 
+AddReference Autodesk.DataManagement.Client.Framework.Vault
+AddReference Autodesk.Connectivity.WebServices
+AddReference Autodesk
+AddReference VDF = Autodesk.DataManagement.Client.Framework
+
 AddReference "C:\Program Files (x86)\Autodesk\Autodesk Vault 2017 SDK\bin\x64\Autodesk.DataManagement.Client.Framework.xml"
 
 Imports System.Drawing

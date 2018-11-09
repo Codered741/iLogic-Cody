@@ -1,0 +1,30 @@
+Imports EDM = Connectivity.InventorAddin.EdmAddin
+	 
+	Sub Main()
+		SetupUserInterface(???, True, ???)
+	End Sub
+	
+	Public Sub SetupUserInterface(ByVal addInSiteObject As Inventor.ApplicationAddInSite, ByVal firstTime As Boolean, ClientID As String)
+			
+			' rest of the code should be left in here for the setupUserInterface
+			'to get connection you should use the edmAddin ServerName Vault Name and username with the password you have logged in with.			
+            If firstTime And...................................................................		
+			
+	    Dim strVaulrServerName As String = Connectivity.InventorAddin.EdmAddin.EdmSecurity.Instance.GetEdmLoginPreferences.Server
+		Dim strVaultName As String = Connectivity.InventorAddin.EdmAddin.EdmSecurity.Instance.GetEdmLoginPreferences.VaultName
+		Dim strVaultUserName As String = Connectivity.InventorAddin.EdmAddin.EdmSecurity.Instance.GetEdmLoginPreferences.UserName
+		Dim strVaultPassword As String = Connectivity.InventorAddin.EdmAddin.EdmSecurity.Instance.GetEdmLoginPreferences.Password
+		
+		Dim results As VDF.Vault.Results.LogInResult
+
+		results = VDF.Vault.Library.ConnectionManager.LogIn(strVaulrServerName, strVaultName, strVaultUserName, strVaultPassword, VDF.Vault.Currency.Connections.AuthenticationFlags.Standard, Nothing)
+
+
+		Dim conn As VDF.Vault.Currency.Connections.Connection = Nothing
+
+		If results.Success Then
+
+			conn = results.Connection
+			
+		End If
+	End sub		

@@ -1,0 +1,27 @@
+'http://adndevblog.typepad.com/manufacturing/2012/06/getting-the-node-represented-in-the-inventor-part-browser-tree.html
+
+Try
+	Dim doc As Document
+
+	doc = ThisApplication.ActiveDocument
+
+	Dim pane As BrowserPane
+
+	pane = doc.BrowserPanes("Vault")
+
+	Dim nodeDef As BrowserNodeDefinition
+	Dim obj As Object
+	
+	
+	MsgBox(pane.TopNode.BrowserNodes.Count)
+	For i = 0 to pane.TopNode.BrowserNodes.Count
+		nodeDef = pane.TopNode.BrowserNodes(5).BrowserNodeDefinition
+	'if this BrowserNode is only a folder, this would give error
+		obj = nodeDef.NativeObject
+		MsgBox(TypeName(obj))
+	Next
+
+
+Catch ex As Exception
+	msgBox(ex.ToString)
+End Try

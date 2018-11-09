@@ -1,0 +1,33 @@
+https://forums.autodesk.com/t5/inventor-customization/browser-folders-in-ilogic/td-p/5599660
+
+oPane = ThisApplication.ActiveDocument.BrowserPanes("Model")
+
+Select Case Angle
+	Case < 20 ul 
+		oFolder = oPane.TopNode.BrowserFolders.Item("ON/OFF HARDWARE")
+
+		'Get the component nodes in the folder
+		oFolderNodes = oFolder.BrowserNode.BrowserNodes 
+
+		'look at each item in the folder
+		For Each oNode As BrowserNode In oFolderNodes 
+			oComp = oNode.NativeObject
+			oComp.Visible = False
+			oComp.BOMStructure = BOMStructureEnum.kReferenceBOMStructure
+		Next
+
+    
+	Case >= 20 ul
+		oFolder = oPane.TopNode.BrowserFolders.Item("ON/OFF HARDWARE")
+		
+		'Get the component nodes in the folder
+		oFolderNodes = oFolder.BrowserNode.BrowserNodes 
+
+		'look at each item in the folder
+		For Each oNode As BrowserNode In oFolderNodes 
+			oComp = oNode.NativeObject
+			oComp.Visible = True
+			oComp.BOMStructure = BOMStructureEnum.kDefaultBOMStructure
+		Next
+
+End Select
