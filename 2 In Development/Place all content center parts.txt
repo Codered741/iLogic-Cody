@@ -1,21 +1,21 @@
 Sub Main()
-	PlaceFromContentCenter()
+	PlaceFromContentCenter("Fasteners", "Bolts", "Hex Head", "Hex Bolt - Inch - Grade 8", 2, 4)
 End Sub
 
-Public Sub PlaceFromContentCenter()
+Public Sub PlaceFromContentCenter(Node1 as String, Node2 As String, Node3 as String, FamilyName as String, xOffset, yOffset)
     Dim asmDoc As AssemblyDocument = ThisApplication.Documents.Add(kAssemblyDocumentObject)
     
     Dim asmDef As AssemblyComponentDefinition = asmDoc.ComponentDefinition
     
     ' Get the node in the content browser based on the names of the nodes in the hierarchy.
-    Dim hexHeadNode As ContentTreeViewNode = ThisApplication.ContentCenter.TreeViewTopNode.ChildNodes.Item("Fasteners").ChildNodes.Item("Bolts").ChildNodes.Item("Hex Head")
+    Dim familyNode As ContentTreeViewNode = ThisApplication.ContentCenter.TreeViewTopNode.ChildNodes.Item(Node1).ChildNodes.Item(Node2).ChildNodes.Item(Node3)
     
     ' Find a specific family.  In this case it's using the display name, but any family
     ' characteristic could be searched for.
     Dim family As ContentFamily
     Dim checkFamily As ContentFamily
-    For Each checkFamily In hexHeadNode.Families
-        If checkFamily.DisplayName = "Hex Bolt - Inch - Grade 8" Then
+    For Each checkFamily In familyNode.Families
+        If checkFamily.DisplayName = FamilyName Then
            family = checkFamily
             Exit For
         End If
@@ -36,7 +36,7 @@ Public Sub PlaceFromContentCenter()
             ' Place the part into the assembly.
             Dim transMatrix As matrix
             transMatrix = ThisApplication.TransientGeometry.CreateMatrix
-            transMatrix.Cell(2, 4) = offset
+            transMatrix.Cell(xOffset, uOffset) = offset
             Dim Occ As ComponentOccurrence = asmDef.Occurrences.Add(memberFilename, transMatrix)
             
             ' Compute the position for the next placement based on the size of the part just placed.
