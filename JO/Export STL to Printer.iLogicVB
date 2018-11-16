@@ -1,4 +1,6 @@
-﻿Imports System.IO
+﻿'v1.1 20181116 Updated to name stl file as part number, not file name.  per request by JO on 20181001
+'v1.0 initial release
+Imports System.IO
 Imports System.IO.Path
 Imports System.Collections
 
@@ -31,11 +33,17 @@ Sub Main()
 			End If
 			
 			DateFolder = folderDate.ToString("yyyyMMdd")
-			'oPath = "C:\TESTING\" & DateFolder & "\" 
+			'oPath = "C:\TESTING\" & DateFolder 'use this to test
 			oPath = "\\RD-Zeus\MultiJet Print Queue\" & DateFolder
-			System.IO.Directory.CreateDirectory(oPath)
+			Try 
+				System.IO.Directory.CreateDirectory(oPath)
+			Catch
+				MessageBox.Show("There was a problem accessing the network location.  The rule cannot continue.  Please make sure that " & oPath & " is available.  ",  "Network Access Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+				Exit Sub
+			End Try
 			
-			oFileName = IO.Path.GetFileNameWithoutExtension(oDoc.FullFileName)
+			'v1.1 change
+			oFileName = oDoc.PropertySets.Item("Design Tracking Properties").Item("Part Number").Value 'IO.Path.GetFileNameWithoutExtension(oDoc.FullFileName)
 			
 			'Get STL translator, and set options for export
 			oSTLAddIn = ThisApplication.ApplicationAddIns.ItemById("{81CA7D27-2DBE-4058-8188-9136F85FC859}")
@@ -64,6 +72,7 @@ Sub Main()
 			End If
 			
 			oDataMedium.FileName = oPath & "\" & oFileName & ".stl"
+			msgbox(oDataMedium.FileName)
 
 			'Publish document
 			Try 
