@@ -1,0 +1,67 @@
+Sub Main()
+	MsgBox(GetFacePerimeter(ThisApplication.ActiveDocument))
+End Sub
+
+Function GetFacePerimeter(Doc as Document) as Double
+    '  a reference to the part component definition.
+    ' This assumes that a part document is active.
+    Dim oCompDef As PartComponentDefinition
+    oCompDef = ThisApplication.ActiveEditDocument.ComponentDefinition
+	
+	If oCompDef.SurfaceBodies.Count > 1 Then
+		MsgBox("There are more than one body in this part, cannot continue.  ")
+		Return 0
+	End If
+	
+	Dim oFaces as Faces = oCompDef.SurfaceBodies.Item(1).Faces
+	Dim dblFaceArea as Double = 0
+	Dim intFaceLargest as Integer = 0 
+	Dim oFace As Face
+	
+	If oFaces.Count > 0 Then
+		For FaceNum = 1 To oFaces.Count
+			If oFaces.Item(FaceNum).SurfaceType = SurfaceTypeEnum.kPlaneSurface Then
+				If oFaces.Item(FaceNum).Evaluator.Area > dblFaceArea Then
+					dblFaceArea = oFaces.Item(FaceNum).Evaluator.Area
+					intFaceLargest = FaceNum
+				End If
+			End If
+		Next
+	End If
+	
+	oFace = oFaces.Item(intFaceLargest) 'ThisApplication.CommandManager.Pick(SelectionFilterEnum.kPartFacePlanarFilter, "Select bottom face")
+	
+	Dim SSet As SelectSet = ThisApplication.ActiveDocument.SelectSet
+	SSet.Select(oFace)
+	
+    ' Get one of the edges of the face to use as the sketch x-axis.
+    Dim oEdge As Edge
+    oEdge = oFace.Edges.Item(1)
+	
+    ' Get the start vertex of the edge to use as the origin of the sketch.
+    Dim oVertex As Vertex
+    oVertex = oEdge.StartVertex
+
+    ' Create a new sketch.  This last argument is  to true to cause the
+    ' creation of sketch geometry from the edges of the face.
+    Dim oSketch As PlanarSketch
+    oSketch = oCompDef.Sketches.AddWithOrientation(oFace, oEdge, True, True, oVertex, True)
+    
+    ' Change the name.
+    oSketch.Name = "Router Estimate"
+    
+	Dim oProfile As Profile
+	oProfile = oSketch.Profiles.AddForSolid
+
+	Dim oRegionProps As RegionProperties
+    oRegionProps = oProfile.RegionProperties
+	
+	oRegionProps.Accuracy = AccuracyEnum.kMedium
+	
+	Dim oUOM As UnitsOfMeasure = Doc.UnitsOfMeasure
+	
+	Return Round(oUOM.ConvertUnits(oRegionProps.Perimeter, "cm", "in"), 2)
+	
+	oSketch.Delete
+	
+End Function
