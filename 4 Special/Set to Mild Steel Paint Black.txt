@@ -1,2 +1,2 @@
-iProperties.Material= "Steel - Mild"
+﻿iProperties.Material= "Steel, Mild"
 iProperties.PartColor = "Paint Black"

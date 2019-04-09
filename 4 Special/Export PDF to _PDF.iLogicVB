@@ -1,0 +1,58 @@
+﻿Imports My.Computer.FileSystem
+Imports System
+Sub Main()
+'declarations
+	Dim oDoc as Document = ThisApplication.ActiveDocument
+	Dim compOcc as ComponentOccurrence
+	customPropertySet = ThisDoc.Document.PropertySets.Item("Inventor User Defined Properties")
+
+'Main
+	
+	' SharedVariable("LogVar") = "Export PDF"
+	' iLogicVB.RunExternalRule("Write SV to Log.iLogicVB")
+	
+	If oDoc.FileSaveCounter >= 1 Then
+		' Are we in a Drawing Document?
+		If oDoc.DocumentType = kDrawingDocumentObject Then
+
+			'http://inventortrenches.blogspot.com/2011/07/ilogic-To-save-pdf-files-To-New.html
+			'msgbox(System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop))
+			oPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Desktop) & "\_PDF\" & Now.ToString("yyyyMMddHHmm") & "\"
+			oFileName = ThisDoc.FileName(False) 'without extension
+			oPDFAddIn = ThisApplication.ApplicationAddIns.ItemById ("{0AC6FD96-2F4D-42CE-8BE0-8AEA580399E4}")
+			oDocument = ThisApplication.ActiveDocument
+			oContext = ThisApplication.TransientObjects.CreateTranslationContext
+			oContext.Type = IOMechanismEnum.kFileBrowseIOMechanism
+			oOptions = ThisApplication.TransientObjects.CreateNameValueMap
+			oDataMedium = ThisApplication.TransientObjects.CreateDataMedium
+
+			If oPDFAddIn.HasSaveCopyAsOptions(oDataMedium, oContext, oOptions) Then
+			oOptions.Value("All_Color_AS_Black") = 0
+			oOptions.Value("Remove_Line_Weights") = 1
+			oOptions.Value("Vector_Resolution") = 400
+			oOptions.Value("Sheet_Range") = Inventor.PrintRangeEnum.kPrintAllSheets
+			End If
+			
+			My.Computer.FileSystem.CreateDirectory(oPath)
+			
+			oDataMedium.FileName = oPath & oFileName & " - " & Now.ToString("yyyyMMddHHmmss") & ".pdf"
+
+			'Publish document
+			Try
+				oPDFAddIn.SaveCopyAs(oDocument, oContext, oOptions, oDataMedium)
+			Catch
+				MessageBox.Show("No Access to Path", "Permission Denied", MessageBoxButtons.OK, MessageBoxIcon.Error)
+				Exit Sub
+			End Try
+			
+		Else
+		
+			MessageBox.Show("This command can only be used in a Drawing.")
+		
+		End If
+	Else
+	
+		MessageBox.Show("File must be saved to continue.", "File Not Saved",MessageBoxButtons.OK,MessageBoxIcon.Error)
+
+	End If
+End Sub

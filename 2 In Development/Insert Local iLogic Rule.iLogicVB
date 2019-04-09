@@ -1,0 +1,44 @@
+'Modified from https://beinginventive.typepad.com/being-inventive/2011/10/creating-ilogic-rules-automatically.html
+'Reference Autodesk.iLogic.Interfaces.xml for detailed iLogic Interface
+Sub Main()
+	InjectLocalRule(ThisApplication.ActiveDocument, "Test", "'Test Rule Code 2", True)
+End Sub
+
+Sub InjectLocalRule(Doc as Document, RuleName as String, RuleText as String, Overwrite As Boolean)
+    
+	Dim iLogicAuto As Object = GetiLogicAddin(ThisApplication)
+	
+    If (iLogicAuto Is Nothing) Then 
+		MsgBox("Could not get iLogic Addin") 
+		Exit Sub
+	End If
+	
+	Try 
+		tryrule = iLogicAuto.GetRule(Doc, RuleName).Name
+	Catch
+		iLogicAuto.AddRule(Doc, RuleName, RuleText)
+	Finally 
+		If Overwrite = True Then
+			iLogicAuto.GetRule(Doc, RuleName).Text = RuleText
+		End If
+	End Try
+	
+End Sub 'InjectLocalRule
+
+
+Function GetiLogicAddin(oApplication As Inventor.Application) As Object
+	Dim addins As Object
+	addins = oApplication.ApplicationAddIns
+
+	'Find the add-in you are looking for
+	Dim addIn As ApplicationAddIn
+	On Error GoTo NotFound
+	addIn = oApplication.ApplicationAddIns.ItemById("{3bdd8d79-2179-4b11-8a5a-257b1c0263ac}")
+
+	If (addIn Is Nothing) Then Exit Function
+
+	addIn.Activate
+	GetiLogicAddin = addIn.Automation
+	Exit Function
+	NotFound:
+End Function 'GetiLogicAddin

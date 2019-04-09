@@ -1,5 +1,6 @@
 Sub Main()
 	PlaceFromContentCenter("Fasteners", "Bolts", "Hex Head", "Hex Bolt - Inch - Grade 8", 2, 4)
+	'rewrite to iterate through content families and place all rows from all families
 End Sub
 
 Public Sub PlaceFromContentCenter(Node1 as String, Node2 As String, Node3 as String, FamilyName as String, xOffset, yOffset)

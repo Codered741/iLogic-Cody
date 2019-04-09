@@ -1,0 +1,194 @@
+'https://forums.autodesk.com/t5/inventor-customization/ilogic-to-add-a-rule-to-an-event-trigger/td-p/7106581
+
+
+Sub s_SetRuleEvent(RuleName As String, EventName As String)
+'EventName *MUST* match one of the cases in the Select Case statement below, otherwise, no joy
+'Not tested for any Events besides Material Change, but in theory...
+    Dim BaseName As String
+    Dim BaseID As Integer
+    Dim BaseUse As String
+	Dim EndHolder As Integer = 0 'EndHolder will act as the numerical value that will be attached to the end of the property name.
+	Dim oCurrentDoc as Object = ThisDoc.Document
+	
+	Try
+		customIPropSet = oCurrentDoc.PropertySets.Item("iLogicEventsRules")
+	Catch
+	End Try
+	Try
+		If customIPropSet Is Nothing Then
+			customIPropSet = oCurrentDoc.PropertySets.Item("_iLogicEventsRules")
+		End If
+	Catch 
+	End Try
+
+	Try
+		If customIPropSet.InternalName <> "{2C540830-0723-455E-A8E2-891722EB4C3E}" Then
+			Call customIPropSet.Delete
+			customIPropSet = oCurrentDoc.PropertySets.Add("iLogicEventsRules", "{2C540830-0723-455E-A8E2-891722EB4C3E}")
+		End If
+	Catch 
+	End Try
+
+	Try
+		If customIPropSet Is Nothing Then
+			customIPropSet = oCurrentDoc.PropertySets.Add("iLogicEventsRules", "{2C540830-0723-455E-A8E2-891722EB4C3E}")
+		End If
+	Catch 
+	End Try
+
+	Try
+		If customIPropSet Is Nothing Then
+			MsgBox("Unable to create the Event Triggers property for this file!", , "Event Triggers Not Set")
+		Exit Sub
+		End If
+	Catch 
+	End Try
+
+	Select Case EventName
+            Case "After Open Document"
+                BaseName = "AfterDocOpen"
+                BaseID = 400
+                BaseUse = "All"
+            Case "Close Document"
+                BaseName = "DocClose"
+                BaseID = 500
+                BaseUse = "All"
+            Case "Before Save Document"
+                BaseName = "BeforeDocSave"
+                BaseID = 700
+                BaseUse = "All"
+            Case "After Save Document"
+                BaseName = "AfterDocSave"
+                BaseID = 800
+                BaseUse = "All"
+            Case "Any Model Parameter Change"
+                BaseName = "AfterAnyParamChange"
+                BaseID = 1000
+                BaseUse = "All"
+            Case "Part Geometry Change**"
+                BaseName = "PartBodyChanged"
+                BaseID = 1200
+                BaseUse = "Part"
+            Case "Material Change**"
+                BaseName = "AfterMaterialChange"
+                BaseID = 1400
+                BaseUse = "Part"
+            Case "Drawing View Change***"
+                BaseName = "AfterDrawingViewsUpdate"
+                BaseID = 1500
+                BaseUse = "Drawing"
+            Case "iProperty Change"
+                BaseName = "AfterAnyiPropertyChange"
+                BaseID = 1600
+                BaseUse = "All"
+            Case "Feature Suppression Change**"
+                BaseName = "AfterFeatureSuppressionChange"
+                BaseID = 2000
+                BaseUse = "Part"
+            Case "Component Suppression Change*"
+                BaseName = "AfterComponentSuppressionChange*"
+                BaseID = 2200
+                BaseUse = "Assembly"
+            Case "iPart / iAssembly Change Component*"
+                BaseName = "AfterComponentReplace"
+                BaseID = 2400
+                BaseUse = "Assembly"
+            Case "New Document"
+                BaseName = "AfterDocNew"
+                BaseID = 2600
+                BaseUse = "All"
+            Case Else
+                BaseUse = "None"
+                MsgBox ("Trigger Event Error in Selection", , "Trigger Event Selection Error")
+                Exit Sub
+        End Select
+		
+		If customIPropSet.Count > 0 Then
+           'We'll make a loop! This will go through each Property (Event Trigger), 1 Property at a time
+            For propItemCounter = 1 To customIPropSet.Count Step 1
+
+                Dim megatest As Object
+                megatest = customIPropSet.Item(propItemCounter)
+
+                Dim nameTest As String
+                nameTest = Left$(customIPropSet.Item(propItemCounter).Name, Len(TriggerPropName))
+
+                Dim idTest As Integer
+                If IsNumeric(customIPropSet.Item(propItemCounter).PropId) Then
+                    idTest = customIPropSet.Item(propItemCounter).PropId / 100 * 100
+                End If
+                If idTest = BaseID Then
+                    'If the property name is equal, then we need to see if the Value of the property (AKA: The Rule Name) is
+                    'equal to the new rule that we made previously. If it is, Then we're all done! The trigger already exists!
+                    If customIPropSet.Item(propItemCounter).Value = RuleName Then
+                        Exit Sub
+                    Else
+                        If nameTest = TriggerPropName Then
+
+                            'If that isn't the case, it's alright. But, we'll need to get that numerical value from the end of the current Property
+                            'because we will need it later to determine which numerical value is needed for the end of our PropertyName.
+                            'The below line is simply looking at the last character of the current Property's Name, which should be a number, and making sure that it IS a number
+                            If IsNumeric(Right$(customIPropSet.Item(propItemCounter).Name, Len(customIPropSet.Item(propItemCounter).Name) - Len(TriggerPropName))) = True Then
+                                'If it is a number, then we need to convert that value (because it's still a String), into an Integer, and set CurrentEnd to equal it.
+                                CurrentEnd = Right$(customIPropSet.Item(propItemCounter).Name, Len(customIPropSet.Item(propItemCounter).Name) - Len(TriggerPropName))
+                                'We'll also go on and grab the Property ID of the open Property
+                                CurrentID = customIPropSet.Item(propItemCounter).PropId
+                                'If the CurrentEnd is larger than our EndHolder (which was defined at the beginning of this sub), Then we need our EndHolder to
+                                'equal 1 more than what is currently in use. Remember that we can't end up with two 'AfterDocSave0' entries.
+                                If CurrentEnd > EndHolder Then
+                                    EndHolder = CurrentEnd + 1
+                                ElseIf CurrentEnd = EndHolder Then
+                                    'However, if CurrentEnd is = to EndHolder, then we'll just add 1 to it.
+                                    EndHolder = EndHolder + 1
+                                End If
+                                'We do the same thing for the Property ID.
+                                If CurrentID > BaseID Then
+                                    BaseID = CurrentID + 1
+                                ElseIf CurrentID = BaseID Then
+                                    BaseID = BaseID + 1
+                                End If
+                            Else
+                                'If for some reason that last character in the Property Name isn't a numeric value, then we have more work to do...
+                                MsgBox ("The end string for Var: CurrentEnd, was not a Numeric Value. If you're reading this, something needs debugging!", , "Error in SetEventProperty Sub")
+                                Exit Sub
+                            End If
+                        Else
+
+                            CurrentEnd = (customIPropSet.Item(propItemCounter).PropId - BaseID)
+                            CurrentID = customIPropSet.Item(propItemCounter).PropId
+
+                            If CurrentEnd > EndHolder Then
+                                EndHolder = CurrentEnd + 1
+                            ElseIf CurrentEnd = EndHolder Then
+                                EndHolder = EndHolder + 1
+                            End If
+
+                            If CurrentID > BaseID Then
+                                BaseID = CurrentID + 1
+                            ElseIf CurrentID = BaseID Then
+                                BaseID = BaseID + 1
+                            End If
+
+                        End If
+                    End If
+                End If
+                'Now we do this all over again for every other item/property (if there are any) in the list
+                'each time checking to see if the Trigger already exists, or incrementing the values of the numeric ending for the PropertyName
+                'and PropertyID.
+            Next
+        End If	
+        'Now that we're done gathering all of the data on the existing Properties / Items, let's add our own to the list.
+        'We call up our CustomIPropSet.Add.
+        'RuleName will be the name of the rule we made earlier.
+        'TriggerPropName & EndHolder equals the BaseID + the numeric value needed to show when it will fire.
+        'BaseID is the new PropertyID that is next in line for use by Inventor.
+        Dim oProp As Object
+		Try
+        	customIPropSet.Add(Trim(RuleName), BaseName & EndHolder, BaseID) 'works, with the trim function, maybe forces conversion to string?  There is no difference between the two strings
+		Catch ex As exception
+			MsgBox(ex.message & vbCrLf & _
+				"Rule Name: " & RuleName & vbCrLf & _
+				"Base Name: " & BaseName & Endholder & vbCrLf & _
+				"BaseID: " & BaseID)
+		End Try
+End Sub

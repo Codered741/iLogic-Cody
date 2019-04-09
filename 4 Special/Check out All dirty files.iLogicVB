@@ -11,7 +11,7 @@ odoc = ThisApplication.ActiveDocument
 For Each invdoc In odoc.AllReferencedDocuments
         If invdoc.Dirty = True Then
                  
-            oCommandMgr.ControlDefinitions.Item("VaultCheckoutTop​").Execute
+            oCommandMgr.ControlDefinitions.Item("VaultCheckout​").Execute
            
         End If
     Next

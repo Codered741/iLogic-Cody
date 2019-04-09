@@ -1,0 +1,75 @@
+'Get Part numbers from BOM
+
+Sub Main()
+	Dim BOMDocs As New List(of String)
+	
+	'get list of part numbers from Structured BOM
+	GetDocsFromBOM(ThisApplication.ActiveDocument, BOMDocs) 
+
+	
+	'display part numbers for user
+	If BOMDocs.Count > 0 Then
+		InputListBox("Available PNs", BOMDocs) 
+	Else
+		MsgBox("There is nothing in the BOM.")
+	End If
+	
+End Sub 
+
+Sub GetDocsFromBOM(oDoc as Document, ByRef BOMDocs as List(of String))
+	
+	If oDoc.DocumentType <> kAssemblyDocumentObject Then
+		MsgBox("This rule can only be run from an assembly")
+		Exit Sub
+	End If
+	
+	Dim oDocBOM As BOM = oDoc.ComponentDefinition.BOM
+	
+	Dim oBOMView as BOMView = oDocBOM.BOMViews.Item("Structured")
+	
+	oDocBOM.StructuredViewEnabled = True
+	oDocBOM.StructuredViewFirstLevelOnly = False
+	oDocBOM.PartsOnlyViewEnabled = False
+	
+	Dim oBOMRows As BOMRowsEnumerator = oBOMView.BOMRows
+	Dim oCompDef As ComponentDefinition
+	Dim oPNProp as Inventor.Property
+	
+	For Each oRow as BOMRow in oBOMRows
+		
+			GetBOMRowPNProp(oRow, BOMDocs)
+		
+	Next 
+	
+	'BOMDocs.Sort()
+	
+End Sub
+
+Sub GetBOMRowDocFile(oRow as BOMRow, ByRef BOMDocs as List(of String))
+	
+	Dim oCompDef As ComponentDefinition
+	
+	'Add the part number of the current row, for parts that have children
+	oCompDef = oRow.ComponentDefinitions.Item(1)
+	
+	If oCompDef.Type = 100675072 Then 'exclude Virtual Components
+		'do nothing
+	Else
+
+		oPNProp = oCompDef.Document.FullFileName
+
+		If Not BOMDocs.Contains(oPNProp) Then
+			BOMDocs.Add(oPNProp)
+		End If
+		
+	End If
+		
+	If Not oRow.ChildRows Is Nothing Then
+	
+		For Each oChildRow as BOMRow in oRow.ChildRows		
+			GetBOMRowPNProp(oChildRow, BOMDocs)
+		Next
+		
+	End If
+	
+End Sub

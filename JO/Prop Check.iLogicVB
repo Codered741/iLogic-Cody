@@ -1,0 +1,51 @@
+'Original Code
+If ThisDoc.Path = "" _
+        AndAlso iProperties.Value("Project", "Project") = "Project" OrElse iProperties.Value("Project", "Description") = "Description" _
+        Then
+    'If document has not been saved before and Smart Part Fill was not filled out...
+        'MessageBox.Show("Message", "Title")
+iProperties.Value("Project", "Project") = InputListBox("Please Enter Project & Description", MultiValue.List("Project, Description"), iProperties.Value("Project", "Project"), Title := "Project", ListName:= "Project List")
+End If
+
+
+'New Code
+Dim oDoc as Document = ThisApplication.ActiveDocument
+Dim oPropSet as PropertySet = oDoc.PropertySets.Item("Design Tracking Properties")
+Dim ProjProp = oPropSet.Item("Project")
+Dim DescProp = oPropSet.Item("Description")
+
+Dim PropMissing as Boolean = False
+Dim PrjMissing As Boolean = False
+Dim DescMissing As Boolean = False
+
+If ProjProp.Value = "" OrElse ProjProp.Value.ToLower = "project" Then
+	PropMissing = True
+	PrjMissing = True
+End If
+
+If DescProp.Value = "" OrElse DescProp.Value.ToLower = "description" Then 
+	PropMissing = True
+	DescMissing = True
+End If
+
+If PropMissing = True Then
+	MessageBox.Show("The Project or Description has not been filled out.  ", "Information Missing")
+
+	If PrjMissing = True Then
+prjname:
+		ProjProp.Value = InputBox("Please select the Project Name", "Project Name", "")
+		If ProjProp.Value = "" Then
+			MsgBox("You did not enter a project name.  Please do so now.  ")
+			GoTo prjname
+		End If
+	End If
+
+	If DescMissing = True Then
+desc:
+		DescProp.Value = InputListBox("Please enter the description.  ", "Description", "")
+		If DescProp.Value = "" Then 
+			MsgBox("You did not enter a Project Name.  Please do so now")
+			GoTo desc
+		End If
+	End If
+End If

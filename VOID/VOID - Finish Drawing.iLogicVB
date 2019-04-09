@@ -1,14 +1,14 @@
-Dim oDoc As DrawingDocument = ThisApplication.ActiveEditDocument
+﻿Dim oDoc As DrawingDocument = ThisApplication.ActiveEditDocument
 Dim oCommandMgr As CommandManager = ThisApplication.CommandManager
 Dim oRefDocs As DocumentsEnumerator = oDoc.AllReferencedDocuments
 Dim oRefDoc As Document = oRefDocs.Item(1)
-Dim makeDxf AS Boolean = True
+Dim makeDxf As Boolean = True
 
 invDesignInfo = oRefDoc.PropertySets.Item("Design Tracking Properties")
 
-DateProp = invDesignInfo.Item("Creation Time")
+'DateProp = invDesignInfo.Item("Creation Time")
 
-DateProp.Value = DateString
+'DateProp.Value = DateString
 
 oCommandMgr.ControlDefinitions.Item("UpdateCopiedModeliPropertiesCmd").Execute2(True)
 

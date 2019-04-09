@@ -1,4 +1,4 @@
-'Collect, Zip?, and Attach DXF's to Drawing
+﻿'Collect, Zip?, and Attach DXF's to Drawing
 Imports System.IO
 Imports System.IO.Path
 Imports System.Collections
@@ -14,18 +14,20 @@ Sub Main()
 	End If
 
 	Dim collectFolder As String = FilePath(oDoc.FullFileName) & BaseFilename(oDoc.FullFileName) & " DXF " & Now.ToString("yyyyMMddHHmm") & "\"
-	If System.IO.Directory.Exists(collectFolder) Then
-		System.IO.Directory.Delete(collectFolder, True)
-	End If
+	MsgBox(collectFolder)
+	
+	'If System.IO.Directory.Exists(collectFolder) Then
+		'System.IO.Directory.Delete(collectFolder, True)
+	'End If
 	
 	Dim oAppend As System.IO.StreamWriter
 	Dim oFile As String = "C:\_vaultWIP\Designs\dbug.log"
 	
-	Try
+	'Try
 		oAppend = IO.File.AppendText(oFile)
-	Catch
+	'Catch
 		noWrite = True
-	End Try
+	'End Try
 	
 	If noWrite = False Then
 		oAppend.WriteLine(ThisApplication.UserName & "," & DateTime.Now.ToString("G") & "," & DocumentFileNameExt(oDoc))
@@ -73,15 +75,15 @@ Sub Main()
 			oAppend.Write(FileNameDXF & ",")
 			copiedFileName = collectFolder & RefDwgBaseFileName & ".dxf"
 			
-			DoCollect(FileNameDXF,copiedFileName)
+			DoCollect(FileNameDXF,copiedFileName, collectFolder)
 			
 			'look for drawing file with the same file name as the ref doc, in the project location, page 1-10
-			For i = 1 to 10 'search for pages 1-10
+			For i = 1 To 10 'search for pages 1-10
 				FileNameDXF = RefDwgDocFileNamePN & " p" & i & ".dxf"
 				oAppend.Write(FileNameDXF & ",")
 				copiedFileName = collectFolder & RefDwgBaseFileName & " p" & i & ".dxf"
 				
-				DoCollect(FileNameDXF,copiedFileName)
+				DoCollect(FileNameDXF,copiedFileName, collectFolder)
 				
 			Next 
 		End If
@@ -92,15 +94,15 @@ Sub Main()
 			oAppend.Write(FileNameDXF & ",")
 			copiedFileName = collectFolder & RefDwgBaseFileNamePN &  ".dxf"
 			
-			DoCollect(FileNameDXF,copiedFileName)
+			DoCollect(FileNameDXF, copiedFileName, collectFolder)
 					
 			'look for files with the part number of the ref doc, in the project location, page 1-10
-			For i = 1 to 10 'search for pages 1-10 by part number
+			For i = 1 To 10 'search for pages 1-10 by part number
 				FileNameDXF = Left(RefDwgDocFileNamePN, RefDwgDocFileNamePN.Length - RefPN.Value.Length) & " p" & i & ".dxf"
 				oAppend.Write(FileNameDXF)
 				copiedFileName = collectFolder & RefDwgBaseFileNamePN & " p" & i & ".dxf"
 				
-				DoCollect(FileNameDXF,copiedFileName)
+				DoCollect(FileNameDXF,copiedFileName, collectFolder)
 				
 			Next
 		End If
@@ -120,7 +122,7 @@ Sub Main()
 	
 End Sub 'Main
 
-Sub DoCollect(FileNameDXF as String, copiedFileName as String)
+Sub DoCollect(FileNameDXF as String, copiedFileName As String, collectFolder As String)
 	If System.IO.File.Exists(FileNameDXF) Then 'search for single page drawings
 		System.IO.Directory.CreateDirectory(collectFolder)
 		My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName, Microsoft.VisualBasic.FileIO.UIOption.AllDialogs, Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing)

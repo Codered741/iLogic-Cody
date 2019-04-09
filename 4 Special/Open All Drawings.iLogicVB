@@ -1,14 +1,22 @@
- Imports System.IO
-Imports System.IO.Path
-Imports System.Collections
-Imports My.Computer.FileSystem
+Imports System.IO
+'Imports System.IO.Path
+'Imports System.Collections
+'Imports My.Computer.FileSystem
+
+
+'Type queueType = Type.GetTypeFromProgID("PDFCreator.JobQueue")
+'Activator.CreateInstance(queueType)
+
+' AddReference "C:\Program Files\PDFCreator\PDFCreator.ComWrapper.dll"
+' Imports pdfforge.PDFCreator.UI.ComWrapper
 
 Sub Main()
-	'On Error Goto Handler:
+	' Dim VaultAddin As Inventor.ApplicationAddIn = ThisApplication.ApplicationAddIns.ItemById("{48B682BC-42E6-4953-84C5-3D253B52E77B}")
+	' VaultAddin.Deactivate()
 	
-	Dim VaultAddin As Inventor.ApplicationAddIn = ThisApplication.ApplicationAddIns.ItemById("{48B682BC-42E6-4953-84C5-3D253B52E77B}")
-	VaultAddin.Deactivate()
-		
+
+	
+	
 	Try 
 		Dim oDoc as Document = ThisApplication.ActiveDocument
 		
@@ -19,28 +27,26 @@ Sub Main()
 		End If
 		
 		'write to iLogic Log
-		SharedVariable("LogVar") = "Batch Plot to PDFCreator"
-		iLogicVB.RunExternalRule("Write SV to Log.iLogicVB")
+		' SharedVariable("LogVar") = "Batch Plot to PDFCreator"
+		' iLogicVB.RunExternalRule("Write SV to Log.iLogicVB")
 		
 		'create access to Batch Plot log
-		Dim oAppend As System.IO.StreamWriter
-		Dim oFile As String = "Z:\Inventor Data\BPLog.log"
-
-		'try getting access to log, disable CSV output if access cannot be gained.  
-		Try
-			noWrite = True
-			
-			oAppend = IO.File.AppendText(oFile)
-			
-		Catch
-			noWrite = True
-		End Try
+		' Dim oAppend As System.IO.StreamWriter
+		' Dim oFile As String = "Z:\Inventor Data\BPLog.log"
+		
+		' 'try getting access to log, disable CSV output if access cannot be gained.  
+		' Try
+			' oAppend = IO.File.AppendText(oFile)
+		' Catch
+			' noWrite = True
+		' End Try
+		
 		
 		'Start Stream output, user name and date stamp
-		If Not noWrite = True Then
-			oAppend.WriteLine("/////////////////////BATCH EXPORT PDF/////////////////////")
-			oAppend.WriteLine(ThisApplication.UserName & "," & DateTime.Now.ToString("G") & "," & oDoc.FullFileName)
-		End If
+		' If Not noWrite = True Then
+			' oAppend.WriteLine("/////////////////////BATCH EXPORT PDF/////////////////////")
+			' oAppend.WriteLine(ThisApplication.UserName & "," & DateTime.Now.ToString("G") & "," & oDoc.FullFileName)
+		' End If
 		
 		'Declare variables
 		Dim oRefDocs as DocumentsEnumerator = oDoc.AllReferencedDocuments
@@ -49,11 +55,12 @@ Sub Main()
 		Dim iProps as PropertySet
 		Dim RefPN
 		Dim PrinterName as String = "PDFCreator"
+		Dim lstDrawings as New List(of String)
+		Dim lstModels as New List(of String)
 		
-		'setup options for open
-		Dim oOptions as NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap
-		'oOptions.Value("DeferUpdates") = True
-		'oOptions.Value("FastOpen") = True
+		Dim oProgressBar as Inventor.ProgressBar
+		Dim DocCount = oRefDocs.Count
+		oProgressBar = ThisApplication.CreateProgressBar(False, DocCount, "Finding Drawings...")
 		
 		'Find drawing of current document and print if found
 		'Get part number property of the filename
@@ -61,241 +68,141 @@ Sub Main()
 		RefPN = iProps.Item("Part Number")
 		
 		'write to log
-		oAppend.Write(oDoc.FullFileName & ",")
+		'oAppend.Write(oDoc.FullFileName & ",")
 
-		'Attempt to find a drawing file of the same name as the model doc
-		RefDwgFullFileName = FindDrawingFile(oDoc)
+		'Attempt to find a drawing file of the same name as the assembly doc
+		RefDwgFullFileName = FindDrawingFilePN(oDoc)
+		
+		oProgressBar.Message = "Checking for drawing of " & oDoc.FullFileName
+		oProgressBar.UpdateProgress
 		
 		If RefDwgFullFileName.Length > 5 Then 
-			
-			If Not noWrite = True Then 
-				oAppend.Write(RefDwgFullFileName & ",Skipping PN search,")
-			End If
-			
-		Else
 		
-			If Not noWrite = True Then
-				oAppend.Write("No File found by File Name,")
-			End If
-			
-			RefDwgFullFileName = FindDrawingFilePN(oDoc)
-			
-			If RefDwgFullFileName.Length > 5 Then	
-				If Not noWrite = True Then
-					oAppend.Write(RefDwgFullFileName & ",")
-				End If
-			Else 
-				If Not noWrite = True Then
-					oAppend.Write("No File found by Part Number,")
-				End If
-			End If
+			lstDrawings.Add(RefDwgFullFileName)
+			lstModels.Add(oDoc.FullFileName)
 			
 		End If
-
-		If RefDwgFullFileName.Length > 5 Then
-			ThisApplication.Documents.OpenWithOptions(RefDwgFullFileName, oOptions, True)
-			
-			Try
-				'DwgPrint(PrinterName)
-			Catch 
-				MessageBox.Show("Something went wrong!  Make sure you have PDFCreator installed and named the same.  ", "Printing Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-				Try
-					System.Diagnostics.Process.Start("http://download.pdfforge.org/download/pdfcreator/PDFCreator-stable")
-				Catch
-				End Try
-				
-				If Not noWrite = True Then
-					oAppend.WriteLine("!!! EXITING - Printing Error")
-					oAppend.Close()
-				End If 
-				Exit Sub
-			End Try
-				
-			'ThisApplication.ActiveDocument.Close(True)
-			
-			If Not noWrite = True Then
-				oAppend.WriteLine("Printed")
-			End If
-			
-		Else
-			If Not noWrite = True Then
-				oAppend.WriteLine("No Drawing found")
-			End If
-		End If
 		
-		'Iterate referenced documents, find drawings and print if found.  
-		For Each oRefDoc in oRefDocs
+		For Each oRefDoc as Document In oDoc.AllReferencedDocuments
 			'Get part number property of the filename
 			iProps = oRefDoc.PropertySets.Item("Design Tracking Properties")
 			RefPN = iProps.Item("Part Number")
 			
+			oProgressBar.Message = "Checking for drawing of " & oRefDoc.FullFileName
+			oProgressBar.UpdateProgress
+			
 			'write to log
-			oAppend.Write(oRefDoc.FullFileName & ",")
+			'oAppend.Write(oRefDoc.FullFileName & ",")
 
 			'Attempt to find a drawing file of the same name as the model doc
-			RefDwgFullFileName = FindDrawingFile(oRefDoc)
+			RefDwgFullFileName = FindDrawingFilePN(oRefDoc)
 				
 			If RefDwgFullFileName.Length > 5 Then 
 				
-				If Not noWrite = True Then 
-					oAppend.Write(RefDwgFullFileName & ",Skipping PN search,")
-				End If
+				lstDrawings.Add(RefDwgFullFileName)
+				lstModels.Add(oRefDoc.FullFileName)
 
-			Else
-				If Not noWrite = True Then
-					oAppend.Write("No File found by File Name,")
-				End If
-				
-				RefDwgFullFileName = FindDrawingFilePN(oRefDoc)
-				
-				If RefDwgFullFileName.Length > 5 Then	
-					If Not noWrite = True Then
-						oAppend.Write(RefDwgFullFileName & ",")
-					End If
-				Else 
-					If Not noWrite = True Then
-						oAppend.Write("No File found by Part Number,")
-					End If
-				End If
-				
-			End If
-			
-			If RefDwgFullFileName.Length > 5 Then
-				ThisApplication.Documents.OpenWithOptions(RefDwgFullFileName, oOptions, True)
-				
-				Try
-					'DwgPrint(PrinterName)
-				Catch 
-					MessageBox.Show("Something went wrong!  Make sure you have PDFCreator installed and named the same.  ", "Printing Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-					
-					Try
-					System.Diagnostics.Process.Start("http://download.pdfforge.org/download/pdfcreator/PDFCreator-stable")
-					Catch
-					End Try
-					
-					If Not noWrite = True Then
-						oAppend.WriteLine("Printing Error")
-						oAppend.Close()
-					End If
-					
-					Exit Sub
-				End Try
-				
-				'ThisApplication.ActiveDocument.Close(True)
-				
-				If Not noWrite = True Then
-					oAppend.WriteLine("Printed")
-				End If
-				
-			Else
-				If Not noWrite = True Then
-					oAppend.WriteLine("No Drawing found")
-				End If
 			End If
 			
 		Next
 		
-		oAppend.Flush()
-		oAppend.Close()
+		oProgressBar.Close
 		
-		VaultAddin.Activate()
+		oProgressBar = ThisApplication.CreateProgressBar(False, lstDrawings.Count, "Opening Files...")
+		For i = 1 To lstDrawings.Count
+			ThisApplication.Documents.Open(lstDrawings(i), True)
+			ThisApplication.Documents.Open(lstModels(i), True)
+			'oPro
+		Next
 		
-		MsgBox("Done")
-	Catch
-		VaultAddin.Activate()
-	End Try
-' Handler:
-	' If Err.Count > 0 Then
-		' MessageBox.Show("An error ocurred.  Refer to error " & Err.Number & "when seeking help.  ")
-		' VaultAddin.Activate()
-	' end If 
+		'MergePrintDwgs(oDoc.FullFileName, lstDrawings)
+		
+	Catch Ex as Exception
 	
+		MsgBox("Original error: " & Ex.Message)
+		
+	Finally 
+	
+		' VaultAddin.Activate
+		
+	End Try
 	
 End Sub 'Main
 
-Sub DwgPrint(PrinterName as String)
-	Dim oPrintMgr As DrawingPrintManager = ThisApplication.ActiveDocument.PrintManager
-	' Get the name of the printer that will be used.
-	oPrintMgr.Printer = PrinterName
+Private Sub MergePrintDwgs(strFilePath as String, lstDwgsPrint as List(of String))
 	
-	' Set to print in color.
-	oPrintMgr.ColorMode = 13313 'kPrintColorPalette
+	Dim PDFCreatorQueue As Queue = New Queue
+	Dim job As Object
+	Dim fullPath As String
 	
-	' Set to print one copies.
-	oPrintMgr.NumberOfCopies = 1
-	
-	' Set to print using landscape orientation.
-	oPrintMgr.Orientation = 13570
-		'13570 'kLandscapeOrientation
-		'13569 'kPortraitOrientation
-	
-	' Set the paper size.
-	oPrintMgr.PaperSize = 14338
-		'14338 'kPaperSize11x17
-	
-	' Set to print all sheets.
-	oPrintMgr.PrintRange = 14082 'kPrintAllSheets
-	
-	' Set to print full scale.
-	oPrintMgr.ScaleMode = 13825 'kPrintFullScale
-	
-	' Submit the print.
-	oPrintMgr.SubmitPrint
-	
-End Sub 'DwgPrint
+	Dim oProgressBar As Inventor.ProgressBar = ThisApplication.CreateProgressBar(False, lstDwgsPrint.Count, "Printing Drawings...")
 
-Sub DoCollect(FileNameDXF as String, copiedFileName as String)
-	If System.IO.File.Exists(FileNameDXF) Then 'search for single page drawings
-		System.IO.Directory.CreateDirectory(collectFolder)
-		My.Computer.FileSystem.CopyFile(FileNameDXF, copiedFileName, Microsoft.VisualBasic.FileIO.UIOption.AllDialogs, Microsoft.VisualBasic.FileIO.UICancelOption.DoNothing)
-	End If
-End Sub 'DoCollect
+	Try
 
-Function FindDrawingFile(PartOrAssemblyDoc As Document)
-    Dim fullFilename As String
-    fullFilename = PartOrAssemblyDoc.fullFilename
-   
-    ' Extract the path from the full filename.
-    Dim path As String
-    path = "C:\_vaultWIP\Designs"
-   
-    ' Extract the filename from the full filename.
-    Dim filename As String
-    filename = Right$(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
-   
-    ' Replace the extension with "dwg"
-    filename = Left$(filename, InStrRev(filename, ".")) & "dwg"
-   
-    ' Find if the drawing exists.
-    Dim drawingFilename As String
-    drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
-   
-    ' Check the result.
-    If drawingFilename = "" Then
-        ' Try again with idw extension.
-        filename = Left$(filename, InStrRev(filename, ".")) & "idw"
-       
-        ' Find if the drawing exists.
-        drawingFilename = ThisApplication.DesignProjectManager.ResolveFile(path, filename)
-   
-        ' Return the result.
-        If drawingFilename <> "" Then
-            FindDrawingFile = drawingFilename
-        Else
-            FindDrawingFile = ""
-        End If
-    Else
-        ' Return the result.
-        FindDrawingFile = drawingFilename
-    End If
-End Function 'FindDrawingFile
+		fullPath = DocumentFileName(strFilePath) 'Path.Combine(Path.GetTempPath, Path.GetTempFileName)
+		
+		'MsgBox("Initializing PDFCreator queue...")
+		PDFCreatorQueue.Initialize()
+		
+		'setup options for open
+		Dim oOptions as NameValueMap = ThisApplication.TransientObjects.CreateNameValueMap
+		oOptions.Value("DeferUpdates") = True
+		oOptions.Value("FastOpen") = True
+		
+		'MsgBox("Printing windows test page...")
+		For Each DwgName as String In lstDwgsPrint
+		
+			oProgressBar.Message = "Printing drawing file: " & DwgName
+			oProgressBar.UpdateProgress
+			ThisApplication.Documents.OpenWithOptions(DwgName, oOptions, True)
+			DwgPrint("PDFCreator")
+			ThisApplication.ActiveDocument.Close(True)
+			
+		Next
+
+		If Not PDFCreatorQueue.WaitForJobs(lstDwgsPrint.Count, lstDwgsPrint.Count * 10) Then
+			MsgBox("The print job did not reach the queue within the allotted time.  ")
+		Else
+		
+			PDFCreatorQueue.MergeAllJobs
+			'MsgBox("Currently there are " & PDFCreatorQueue.Count & " job(s) in the queue")
+			'MsgBox("Getting job instance")
+			job = PDFCreatorQueue.NextJob
+
+			job.SetProfileByGuid("DefaultGuid")
+
+			'MsgBox("Converting under ""DefaultGuid"" conversion profile")
+			job.ConvertTo(fullPath)
+
+			If (Not job.IsFinished Or Not job.IsSuccessful) Then
+				MsgBox("Could not convert the file: " & fullPath)
+			Else
+				'MsgBox("Job finished successfully")
+			End If
+		End If
+		
+	Catch Ex As Exception
+	
+		MessageBox.Show("Original error: " & Ex.Message)
+		
+	Finally
+	
+		'MsgBox("Releasing the queue object")
+		PDFCreatorQueue.ReleaseCom()
+		oProgressBar.Close
+		
+	End Try
+	
+	ThisDoc.Launch(fullPath & ".pdf")
+	
+End Sub
 
 Function FindDrawingFilePN(PartOrAssemblyDoc As Document)
     Dim fullFilenamePN As String
     fullFilenamePN = PartOrAssemblyDoc.fullFilename
    
     ' Extract the path from the full filename.
-    Dim path As String = "C:\_vaultWIP\Designs"
+    Dim path As String = ThisApplication.DesignProjectManager.ActiveDesignProject.WorkspacePath
     'path = Left$(fullFilenamePN, InStrRev(fullFilenamePN, "\"))
    
 	Dim iProps as PropertySet = PartOrAssemblyDoc.PropertySets.Item("Design Tracking Properties")
@@ -331,14 +238,42 @@ Function FindDrawingFilePN(PartOrAssemblyDoc As Document)
     End If
 End Function 'FindDrawingFilePN
 
-Function isDwg(ThisDoc as Document) As Boolean
-	Debug.Print (ThisDoc.DocumentType)
-	If ThisDoc.DocumentType = kDrawingDocumentObject
-		isDwg = True
-	Else 
-		isDwg = False
-	End If
-End Function 'isDwg
+Private Sub DwgPrint(PrinterName as String)
+	Dim oPrintMgr As DrawingPrintManager = ThisApplication.ActiveDocument.PrintManager
+	' Get the name of the printer that will be used.
+	oPrintMgr.Printer = PrinterName
+	
+	' Set to print in color.
+	oPrintMgr.ColorMode = 13313 'kPrintColorPalette
+	
+	' Set to print one copies.
+	oPrintMgr.NumberOfCopies = 1
+	
+	' Set to print using landscape orientation.
+	oPrintMgr.Orientation = 13570
+		'13570 'kLandscapeOrientation
+		'13569 'kPortraitOrientation
+	
+	' Set the paper size.
+	oPrintMgr.PaperSize = 14338
+		'14338 'kPaperSize11x17
+	
+	' Set to print all sheets.
+	oPrintMgr.PrintRange = 14082 'kPrintAllSheets
+	
+	' Set to print full scale.
+	oPrintMgr.ScaleMode = 13825 'kPrintFullScale
+	
+	' Submit the print.
+	oPrintMgr.SubmitPrint
+End Sub 'DwgPrint
+
+Private Sub printTestFile()
+	Dim ShellObj As Object
+
+	ShellObj = CreateObject("Shell.Application")
+	ShellObj.ShellExecute("RUNDLL32.exe", "PRINTUI.DLL,PrintUIEntry /k /n ""PDFCreator""", "", "open", 1)
+End Sub
 
 Function DocumentFileName(Doc As String) As String
 	DocumentFileName = Left(Doc, Doc.Length - 4)
@@ -353,17 +288,3 @@ Function isAsm(ThisDoc As Document) As Boolean
 		isAsm = False
 	End If
 End Function 'isAsm
-
-Function BaseFilename(ByVal fullFilename As String) As String
-    Dim temp As String
-    temp = Right(fullFilename, Len(fullFilename) - InStrRev(fullFilename, "\"))
-    BaseFilename = Left(temp, InStrRev(temp, ".") - 1)
-End Function 'BaseFilename
-
-Function FilePath(ByVal fullFilename As String) As String
-    FilePath = Left(fullFilename, InStrRev(fullFilename, "\"))
-End Function 'FilePath
-
-Function DocumentFileNameExt(Doc as Document) As String
-	DocumentFileNameExt = IO.Path.GetFileName(Doc.FullFileName)
-End Function 'DocumentFileNameExt

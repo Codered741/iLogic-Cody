@@ -15,7 +15,7 @@
 	Dim oCommandMgr As CommandManager = ThisApplication.CommandManager
 	oCommandMgr.ControlDefinitions.Item("VaultCheckout").Execute 'Check out file
 	
-	iLogicVB.RunExternalRule("Smart Part Property Add")
+	iLogicVb.RunExternalRule("Smart Part Property Add")
 	
 	'Autofill
 	iLogicVb.RunExternalRule("Smart Part Property Add")
@@ -31,19 +31,18 @@
 	'Add a select case for the projects you are working on.  pull the list from an excel document.  
 	'promt to select from initial list, then import a new list based on that selection.  The selection should be the sheet name containing the options for that job. 
 
-	'VOID Specific
 	If isPrt(oDoc) Then
 		
-		MtlChoice = InputListBox("Select Material", VOIDMtls, VOIDMtls(0), "Part Material", "Select One")
+		MtlChoice = InputListBox("Select Material", VOIDMtls, VOIDMtls(1), "Part Material", "Select One")
 		iProperties.Value("Custom", "MATERIAL DESCRIPTION") = MtlChoice
 		
 		
 		If MtlChoice.ToLower.Contains("plywood") Then
 			iProperties.Material= "Plywood, Finish"
-			iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
+			'iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 		Else If MtlChoice.Contains("Steel")
 			iProperties.Material = "Steel, Mild"
-			iProperties.PartColor = "Powdercoat Iron Grey (RAL 7011)"
+			'iProperties.PartColor = "Powdercoat Iron Grey (RAL 7011)"
 		End If
 		
 		addOPParam = False
@@ -70,7 +69,7 @@
 		Parameter("OP1") = "OP038:OS - Turnkey Fabrication~"
 	End If
 
-	Dim NoteOptions(0 to 9) As String
+	Dim NoteOptions(0 To 10) As String
 	
 	NoteOptions(0) = "Texture"
 	NoteOptions(1) = "No Texture"
@@ -82,16 +81,19 @@
 	NoteOptions(7) = "Mounting Panel"
 	NoteOptions(8) = "None"
 	NoteOptions(9) = "Jig"
+	NoteOptions(10) = "Raw w/ FlameStop"
 	
-	addNotes = InputListBox("Select Note Type", NoteOptions, NoteOptions(1), "Note Types", "Select One")
+	addNotes = InputListBox("Select Note Type", NoteOptions, NoteOptions(10), "Note Types", "Select One")
 
 	If addNotes  = "Texture" Then
 		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
 					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION" & vbCrLf & _
 					"  - APPLY TEXTURE ACCORDING TO INCLUDED PROCEDURE"
+					iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 	Else If addNotes = "No Texture"
 		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
 					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION"
+					iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 	Else If addNotes = "Flat w/ Texture"
 		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
 					"  - ASSEMBLE PARTS USING WOOD GLUE AND STAPLES" & vbCrLf & _
@@ -104,20 +106,24 @@
 					"  - PAINT ACCORDING TO INCLUDED PROCEDURE" & vbCrLf & _
 					"  - ALL MATERIAL IS 12mm (1/2in) FINNISH BIRCH PLYWOOD, UOS" & vbCrLf & _
 					"  - LOCK EXTRUSION IS 1in SQ. STEEL TUBE"
+					iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 	Else If addNotes = "Deck Parts"
 				iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
 					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION" & vbCrLf & _
 					"  - PAINT ALL TOP AND VERTICAL SURFACES BLACK, AFTER RUBBER IS APPLIED"
+					iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 	Else If addNotes = "Column"
 				iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
 					"  - NOTE DIRECTION OF PIN AND WRENCH HOLES WHEN INSTALLING COFFIN LOCKS" & vbCrLf & _
 					"  - USE MEDIUM STRENGTH THREAD LOCKER WHEN INSTALLING ALL FASTENERS" & vbCrLf & _
 					"  - WELD AND T-NUTS MUST BE INSTALLED PRIOR TO ASSEMBLING COLUMN" 
+					iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 	Else If addNotes = "Wall Assembly"
 				iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
 					"  - NOTE DIRECTION OF PIN AND WRENCH HOLES WHEN INSTALLING COFFIN LOCKS" & vbCrLf & _
 					"  - USE MEDIUM STRENGTH THREAD LOCKER WHEN INSTALLING ALL FASTENERS" & vbCrLf & _
 					"  - WELD AND T-NUTS MUST BE INSTALLED PRIOR TO ASSEMBLING WALL" 
+					iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 	Else If addNotes = "None"
 		iProperties.Value("Summary", "Comments") = ""
 	Else If addNotes = "Mounting Panel"
@@ -125,6 +131,7 @@
 					"  - PINS ARE ORIENTATED OPPOSITE DIRECTION OF ARROW" & vbCrLf & _
 					"  - ENSURE THAT HARDWARE IS INSTALLED FLUSH TO BOTTOM FACE" & vbCrLf & _
 					"  - PACKAGE 1/4 SHCS HARDWARE AND INSERT NUTS IN BAG, ATTACH TO ASSEMBLY"
+					iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 	Else If addNotes = "Wall Panel"				
 		iProperties.Value("Summary", "Comments") = "NOTES: " & vbCrLf & _
 					"  - ASSEMBLE PARTS USING WOOD GLUE AND STAPLES"& vbCrLf & _
@@ -137,9 +144,13 @@
 					"  - PAINT ACCORDING TO INCLUDED PROCEDURE" & vbCrLf & _
 					"  - ALL MATERIAL IS 12mm (1/2in) FINNISH BIRCH PLYWOOD, UOS" & vbCrLf & _
 					"  - LOCK EXTRUSION IS 1in SQ. STEEL TUBE"
+					iProperties.PartColor = "Paint Iron Grey (RAL 7011)"
 	Else If addNotes = "Jig"
 		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
 					"  - PART MUST BE FREE OF SPLINTERS OR BURRS.  "
+	Else If addNotes = "Raw w/ FlameStop"
+		iProperties.Value("Summary", "Comments") = "NOTES" & vbCrLf & _
+					"  - APPLY FLAMESTOP II ACCORDING TO MANUFACTURERS INSTRUCTION"
 	End If
 
 	'\VOID
@@ -150,17 +161,10 @@
 	Dim oCam As Camera
 	oCam = ThisApplication.ActiveView.Camera
 	
-	oCam.Perspective = False
-	oCam.ViewOrientationType = 10764 'kFrontViewOrientation
-	oCam.Fit()
-	oCam.Apply
-	
 	If SetView = vbYes Then
 		ThisApplication.CommandManager.ControlDefinitions.Item("AppLookAtCmd").Execute2(True)
 		
 		ThisApplication.ActiveView.SetCurrentAsFront
-		
-
 		
 		oCam.Perspective = False
 		oCam.ViewOrientationType = 10759 'kIsoTopRightViewOrientation
@@ -169,12 +173,20 @@
 		
 		ThisApplication.ActiveView.SetCurrentAsHome
 		
+	Else 
+	
+		oCam.Perspective = False
+		oCam.ViewOrientationType = 10759 'kIsoTopRightViewOrientation
+		oCam.Fit()
+		oCam.Apply
+		
 	End If
 	
 	'Finish Config and Open form for checking
 	oDoc.Save2
 	iLogicVb.RunExternalRule("Smart Part Config")
-	iLogicForm.ShowGlobal("Smart Part Config")
+	'iLogicForm.ShowGlobal("Smart Part Config")
+	iLogicVb.RunExternalRule("AutoDraw")
 End Sub
 
 Function isPrt(ThisDoc As Document) As Boolean
