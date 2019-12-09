@@ -1,0 +1,27 @@
+Sub Main()
+	Dim oDoc as Document = ThisApplication.ActiveDocument
+	Dim oDocRefs = oDoc.AllReferencedDocuments
+	
+	Dim DocProps 
+	Dim DocMB
+	Dim MakeCount as Integer = 1
+	
+	For Each Doc as Document In oDocRefs
+
+		Try 
+			DocProps = Doc.PropertySets.Item("Inventor User Defined Properties")
+			
+			If DocProps.Item("MakeBuy").Value = "Make" Then
+				MakeCount = MakeCount + 1
+			End If
+			
+		Catch
+		
+		End Try
+		
+	Next
+	
+	MsgBox(MakeCount & " makes were found. ")
+	
+End Sub
+			
