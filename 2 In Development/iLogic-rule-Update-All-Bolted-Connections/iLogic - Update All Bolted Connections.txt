@@ -1,0 +1,54 @@
+
+		' Start of iLogic rule =============================================================================
+		
+		' This iLogic rule by Luke Davenport @ Excitech.
+		' The rule selects all the TOP LEVEL bolted connections in the active assembly, turns on the standard 'Auto Solve'
+		' ....option, and then updates the assembly. Once the bolted connections have updated, the 'Auto Solve' option is 
+		' ....then switched off so assembly performance is not affected.
+		
+		' Important note: this code will only recognise bolted connections that have a name containing 'Bolt'. Please customize
+		' ....this to suit.
+		
+        Dim oDoc As AssemblyDocument = Nothing
+		Try
+		oDoc = ThisApplication.ActiveDocument
+		Catch
+			MsgBox("This rule can only be run in an assembly - exiting now...", 64, "Excitech iLogic")
+		End Try
+		
+        Dim oSelectedOccs As ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection
+		Dim BoltCount As Integer = 0
+
+        ' Turn bolt auto calc ON ****************************************************************************
+
+        ' Loop through top level occurrences. If occurrence is a bolted connection, add it to select set
+        For Each oOcc As ComponentOccurrence In oDoc.ComponentDefinition.Occurrences
+            If Not oOcc.Suppressed Then
+                If oOcc.Name.Contains("Bolt") Then
+					BoltCount += 1
+                    oSelectedOccs.Add(oOcc)
+                End If
+            End If
+        Next
+
+        For Each B As ComponentOccurrence In oSelectedOccs
+            oDoc.SelectSet.SelectMultiple(oSelectedOccs)
+        Next
+
+        ' Execute auto solve calc
+        ThisApplication.CommandManager.ControlDefinitions.Item("FDSolveAuto").Execute()
+
+        oDoc.Update()
+
+        ' Turn bolt auto calc OFF ****************************************************************************
+
+        For Each B As ComponentOccurrence In oSelectedOccs
+            oDoc.SelectSet.SelectMultiple(oSelectedOccs)
+        Next
+
+        ' Execute auto solve calc
+        ThisApplication.CommandManager.ControlDefinitions.Item("FDSolveManual").Execute()
+		
+		MsgBox(BoltCount & " top-level bolted connections found and updated", 64, "Excitech iLogic")
+
+		' End of iLogic rule =============================================================================
