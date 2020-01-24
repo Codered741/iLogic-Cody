@@ -1,0 +1,24 @@
+	Dim oDoc As Document = ThisApplication.ActiveEditDocument 
+	
+	'Catch if run from drawing or IPN
+	If oDoc.DocumentType = 12292 Then 'kDrawingDocumentObject
+		MessageBox.Show("This rule can only be run in Assemblies and Parts.  Please try again.  ", "Model Only Rule")
+		Exit Sub
+	End If
+	
+	Dim oCompDef as Object
+	
+	If oDoc.DocumentType = 12291 Then 'kAssemblyDocumentObject
+		msgBox("asm")
+		oCompDef = CType(oDoc.ComponentDefinition, AssemblyComponentDefinition)
+	Else If oDoc.DocumentType = 12290 Then 'kPartDocumentObject
+		msgbox("part")
+		oCompDef = CType(oDoc.ComponentDefinition, PartComponentDefinition)
+	End If
+	
+	msgbox(oCompDef.Type)
+	
+	
+	Dim oCompBOM As BOM = oCompDef.BOM
+	
+	

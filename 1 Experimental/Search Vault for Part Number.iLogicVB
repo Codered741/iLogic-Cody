@@ -1,0 +1,135 @@
+'search vault for part number
+'https://forums.autodesk.com/t5/inventor-customization/search-vault-to-see-if-a-part-exists/td-p/8786941
+
+''' <summary>
+    ''' Stores fi as local WorkFile property, then gets the vault database file and folder to set VaultFile and VaultFolder properties.
+    ''' </summary>
+    ''' <param name="fi">new workfile to utilize</param>
+    Public Sub GetVaultedFileData(fi As System.IO.FileInfo)
+        Try
+            WorkFile = fi
+            If Tools.AccessVault Then
+                Dim files As List(Of VWS.File) = GetRelatedFilesFromVault(fi)
+                Dim folders As List(Of VWS.Folder) = GetFileFolders(files)
+                For Each file As VWS.File In files
+                    For Each folder As VWS.Folder In folders
+                        If folder.Id = file.FolderId Then
+                            Dim strPath As String = GetFolderPath(folder) & "\" & file.VerName
+                            If fi.FullName = strPath Then
+                                VaultFile = file
+                                VaultFolder = folder
+                                GetThumbnail()
+                                Exit For
+                            End If
+                        End If
+                    Next
+                Next
+            End If
+        Catch ex As Exception
+            Dim eh As New ErrorHandler(ex)
+            eh.HandleIt()
+        End Try
+    End Sub
+
+   ''' <summary>
+    ''' Searches vault and gets all the database file references with fi.name, does not download files.
+    ''' </summary>
+    ''' <param name="fi">work file</param>
+    ''' <returns>list of vault file references</returns>
+    Public Function GetRelatedFilesFromVault(fi As System.IO.FileInfo) As List(Of VWS.File)
+        Dim files As New List(Of VWS.File)
+        If Tools.AccessVault = True Then
+            If fi IsNot Nothing Then
+                Dim scs As New List(Of VWS.SrchCond)
+                Dim sc As New VWS.SrchCond
+                With sc
+                    .PropDefId = 9
+                    .SrchOper = 1
+                    .SrchTxt = fi.Name
+                    .PropTyp = VWS.PropertySearchType.SingleProperty
+                    .SrchRule = VWS.SearchRuleType.Must
+                End With
+                scs.Add(sc)
+                Dim srs As New List(Of VWS.SrchSort)
+                Dim fIDs As New List(Of Long)
+                Dim bm As String = String.Empty
+                Dim ss As New VWS.SrchStatus
+                Dim intFilesProcessed As Integer = 0
+                Do
+                    Try
+                        Dim foundfiles() As VWS.File = wsm.DocumentService.FindFilesBySearchConditions(scs.ToArray, srs.ToArray, fIDs.ToArray, True, True, bm, ss)
+                        If foundfiles IsNot Nothing Then 'not so fast, vault is returning bogus entries, we need to compare the files returned ourselves.
+                            For Each foundFile As VWS.File In foundfiles
+                                intFilesProcessed += 1
+                                If foundFile.Name = fi.Name Then
+                                    files.Add(foundFile)
+                                End If
+                            Next
+                            'files.AddRange(foundfiles)
+                        End If
+                    Catch ex As Exception
+                        Dim eh As New ErrorHandler(ex)
+                        eh.HandleIt()
+                    End Try
+                Loop Until ss.TotalHits = intFilesProcessed
+            End If
+        End If
+        Return files
+    End Function
+
+    ''' <summary>
+    ''' Compiles a list of distinct VWS.Folder objects from the list of files.  Useful when approaching vault for a folder download.
+    ''' </summary>
+    ''' <param name="files">list of VWS files that have folder IDs</param>
+    ''' <returns>list of VWS folder objects taken from the files, and found in vault by their IDs</returns>
+    Public Shared Function GetFileFolders(files As List(Of VWS.File)) As List(Of VWS.Folder)
+        Dim folderIDs As New List(Of Long)
+        Dim folders As New List(Of VWS.Folder)
+        If files.Count > 0 Then
+            For Each file As VWS.File In files
+                If folderIDs.Contains(file.FolderId) = False Then
+                    folderIDs.Add(file.FolderId)
+                End If
+            Next
+            If AccessVault = True Then folders.AddRange(wsm.DocumentService.FindFoldersByIds(folderIDs.ToArray))
+        End If
+        Return folders
+    End Function
+
+    ''' <summary>
+    ''' Takes in a Vault database folder and returns a properly formated working folder path.
+    ''' </summary>
+    ''' <param name="folder">Vault Web Services folder</param>
+    ''' <returns>UNC path</returns>
+    Public Function GetFolderPath(folder As VWS.Folder) As String
+        Dim strFolderPath As String = String.Empty
+        If folder.FullUncName IsNot Nothing Then
+            strFolderPath = folder.FullUncName
+        ElseIf folder.FullName IsNot Nothing Then
+            strFolderPath = folder.FullName
+        End If
+        Return Tools.ConvertToWorkingFolderPath(strFolderPath) ' strFolderPath.Replace("$", VaultWorkingFolder).ToString.Replace("/", "\")
+    End Function
+
+    Private Sub GetThumbnail()
+        If VaultedFiles.Instance.VaultConnection IsNot Nothing Then
+            If VaultFile.Name.ToUpper.Contains(".PDF") OrElse VaultFile.Name.ToUpper.Contains(".XLS") Then Exit Sub
+            Dim fileIter As Vault.Currency.Entities.FileIteration = New Vault.Currency.Entities.FileIteration(VaultedFiles.Instance.VaultConnection, VaultFile)
+            Dim thumbnailPropDef As Vault.Currency.Properties.PropertyDefinition = VaultedFiles.Instance.VaultConnection.PropertyManager.GetPropertyDefinitionBySystemName("Thumbnail")
+            Dim thumbnailInfo As Vault.Currency.Properties.ThumbnailInfo
+            Try
+                thumbnailInfo = VaultedFiles.Instance.VaultConnection.PropertyManager.GetPropertyValue(fileIter, thumbnailPropDef, Nothing)
+                Dim thumbnailBytes() As Byte = thumbnailInfo.Image
+                Dim ms As New MemoryStream(thumbnailBytes)
+                ' Dim returnimage As System.Drawing.Image = System.Drawing.Image.FromStream(ms)
+                Dim image As New BitmapImage()
+                image.BeginInit()
+                image.StreamSource = ms
+                image.EndInit()
+                FileThumbnail = TryCast(image, ImageSource)
+                FileThumbnail.Freeze()
+            Catch ex As Exception
+                'skip it
+            End Try
+        End If
+    End Sub

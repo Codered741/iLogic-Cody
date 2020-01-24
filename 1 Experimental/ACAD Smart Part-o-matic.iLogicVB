@@ -1,0 +1,156 @@
+
+AddReference "C:\Program Files\Autodesk\AutoCAD 2017\Autodesk.AutoCAD.Interop.dll"
+AddReference "C:\Program Files\Autodesk\AutoCAD 2017\Autodesk.AutoCAD.Interop.Common.dll"
+
+Imports System.IO
+
+
+Imports Autodesk.AutoCAD.Interop
+Imports Autodesk.AutoCAD.Interop.Common
+
+' Imports acAppSvc = Autodesk.AutoCAD.ApplicationServices
+' Imports acDB = Autodesk.AutoCAD.DatabaseServices
+' Imports acRT = Autodesk.AutoCAD.Runtime
+
+Sub Main
+	
+	On Error Resume Next
+	
+	Dim oAcadApp as AcadApplication = GetObject(, "AutoCAD.Application")
+	If Err.Number  > 0 Then
+		Err.Clear
+		MsgBox("Could not get ACAD, launching.  ")
+		oAcadApp = CreateObject("AutoCAD.Application")
+		If Err.Number > 0 Then
+			MsgBox("Error launching AutoCAD.  ")
+			Exit Sub
+		End If
+	End If
+	
+	oAcadApp.Visible = True
+	
+	Dim oAsmDoc as Document
+	Dim compOcc as ComponentOccurrence
+	customPropertySet = ThisDoc.Document.PropertySets.Item("Inventor User Defined Properties")
+	
+	oAsmDoc = ThisApplication.ActiveEditDocument
+	
+	If oAsmDoc.FileSaveCounter >= 1 Then
+		' Are we in a Assembly or Part Document?
+		If oAsmDoc.DocumentType = kAssemblyDocumentObject Or oAsmDoc.DocumentType = kPartDocumentObject Then
+			
+			'Pull path and File Name, append desired file type, and execute save as.  
+			FileName = ThisDoc.PathAndFileName(False)
+			FileNameDWG = FileName & " ACAD SIMPLE.DWG"
+			ThisDoc.Document.SaveAs(FileNameDWG, True)
+			
+		Else
+		
+			MessageBox.Show("This command can only be used in an Assembly or Part.")
+			
+		End If
+		
+	Else
+	
+		MessageBox.Show("File must be saved to continue.", "File Not Saved",MessageBoxButtons.OK,MessageBoxIcon.Error)
+
+	End If
+	
+	' Dim acDocMgr as Autodesk.AutoCAD.ApplicationServices.DocumentCollection = oAcadApp.DocumentManager
+	
+	' Autodesk.AutoCAD.DatabaseServices.DocumentCollectionExtension.Open(acDocMgr, FileNameDWG, False)
+	
+	AcadDoc = oAcadApp.Documents.Open(FileNameDWG, False)
+	
+	oAcadApp.Activate
+	
+	' dim ssetobj = AcadDoc.SelectionSets.Add("SSET")
+	
+	' ssetobj.Select(acSelectionSetAll)
+	
+		Dim propNames as New List(Of String)
+		PropNames.Add("Ops")
+		PropNames.Add("Width")
+		PropNames.Add("Length")
+		PropNames.Add("Make-Buy")
+		PropNames.Add("Notes")
+		PropNames.Add("MaterialDesc")
+		PropNames.Add("MaterialNum")
+		PropNames.Add("CreateDate")
+		PropNames.Add("Designer")
+		PropNames.Add("MfgPart#")
+		PropNames.Add("RevNum")
+		PropNames.Add("PartNumber")
+		PropNames.Add("PartDescription")
+				
+	Dim propPrompt as New List(Of String)
+		propPrompt.Add("Ops")	
+		propPrompt.Add("Width")
+		propPrompt.Add("Length")
+		propPrompt.Add("Make-Buy")
+		propPrompt.Add("Notes")
+		propPrompt.Add("MaterialDesc")
+		propPrompt.Add("MaterialNum")
+		propPrompt.Add("Creation Date")
+		propPrompt.Add("Designer")
+		propPrompt.Add("Mfg Part #")
+		propPrompt.Add("Rev #")
+		propPrompt.Add("Part #")
+		propPrompt.Add("Part Description")
+	
+	Dim propVal as New List(Of String)
+		propVal.Add("Ops")
+		propVal.Add("Width")
+		propVal.Add("Length")
+		propVal.Add("Make")
+		propVal.Add("Notes")
+		propVal.Add(iProperties.Value("Custom", "Material Description"))
+		propVal.Add(iProperties.Value("Custom", "Material Number"))
+		propVal.Add(iProperties.Value("Project", "Creation Date"))
+		propVal.Add(iProperties.Value("Project", "Designer"))
+		propVal.Add("NA")
+		propVal.Add(iProperties.Value("Project", "Revision Number"))
+		propVal.Add(iProperties.Value("Project", "Part Number"))
+		propVal.Add(iProperties.Value("Project", "Description"))		
+		
+		
+	Randomize
+	Rval = Int(255 * Rnd) +1
+	Gval = Int(255 * Rnd) +1
+	Bval = Int(255 * Rnd) +1
+	
+	acLayCol = Rval & "," & Gval & "," & Bval
+	LayerName = iProperties.Value("Project", "Part Number") & "-" & iProperties.Value("Project", "Description") & " - INVENTOR"
+	BlockName = LayerName.Replace(" ", "_")
+	
+	'AcadDoc.SendCommand("SELECT" & vbCr & & "P" & vbCr & vbCr)
+	
+	AcadDoc.SendCommand("-layer" & vbCr & "m" & vbCr & LayerName & vbCr & "c" & vbCr & "t" & vbCr & acLayCol & vbCr & LayerName & vbCr & vbCr) ' creates layer with the part number and description
+		
+	AcadDoc.SendCommand("-Ch" & vbCr & "ALL" & vbCr & vbCr & "p" & vbCr & "LA" & vbCr & LayerName & vbCr & vbCr)'change all objects (existing solids) to the newly created layer
+	
+	AcadDoc.SendCommand("-layer" & vbCr & "m" & vbCr & "Attribute_TT" & vbCr & "c" & vbCr & "t" & vbCr & "0,0,0" & vbCr & "Attribute_TT" & vbCr & vbCr)'create the attribute layer
+	
+	AcadDoc.SendCommand("-attdef" & vbCr & "c" & vbCr & vbCr & PropNames(0) & vbCr & propPrompt(0) & vbCr & propVal(0) & vbCr & "0,0,0" & vbCr & "0.001" & vbCr & vbCr) ' create the first attribute, setting to constant, to avoid the doalog on insert
+	
+	For i = 1 to 12 'insert the remaining block definitions
+		'msgbox( i & " - " & PropNames(i) & " - " & propPrompt(i) & " - " & propVal(i)) 'debug
+		AcadDoc.SendCommand("-attdef" & vbCr & vbCr & PropNames(i) & vbCr & propPrompt(i) & vbCr & propVal(i) & vbCr & "0,0,0" & vbCr & "0.001" & vbCr & vbCr)
+	Next
+	
+	AcadDoc.SendCommand("-block" & vbCr & BlockName & vbCr & "0,0,0" & vbCr & "all" & vbCr & vbCr) 'block all objects
+	
+	AcadDoc.SendCommand("-layer" & vbCr & "s" & vbCr & LayerName & vbCr & vbCr)
+	
+	AcadDoc.SendCommand("-insert" & vbCr & BlockName & vbCr & "0,0,0" & vbCr & vbCr & vbCr & vbCr) 'insert the block into the drawing. 
+	
+	AcadDoc.SendCommand("-layer" & vbCr & "lo" & vbCr & "Attribute_TT" & vbCr & vbCr) 'Lock the attribute layer
+	
+	'AcadDoc.SendCommand("_ai_selall" & vbCr)
+	
+	AcadDoc.SendCommand("qsave" &  vbCr)
+	
+	'AcadDoc.SendCommand("close" &  vbCr)
+
+
+End Sub

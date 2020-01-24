@@ -1,0 +1,138 @@
+AddReference "Microsoft.Office.Interop.Excel"
+Imports System.Windows.Forms
+
+Sub Main()
+	On Error Resume Next
+	Dim oDoc As PartDocument = ThisApplication.ActiveDocument
+	Dim oCompDef As PartComponentDefinition = oDoc.ComponentDefinition
+	Dim oSks3d As Sketches3D = oCompDef.Sketches3D
+	Dim oSk3d As Sketch3d
+	Dim oSplines3d As SketchSplines3D
+	Dim oSpline3d As SketchSpline3D
+	Dim SketchName As String = "Envelope Control Sketch"
+	
+	'get/create excel
+	Dim xlApp as Microsoft.Office.Interop.Excel.Application
+	Dim xlOpenedByRule as Boolean = False
+	xlApp = GetObject(, "Excel.Application")
+	If Err.Number <> 0 Then
+		Err.Clear
+		msgbox("Opening Excel...")
+		xlApp = CreateObject("Excel.Application")
+		xlOpenedByRule = True
+		
+		If Err.Number <> 0 Then	
+			MsgBox("Cannot access Excel")
+			Exit Sub
+		End If
+	End If
+	
+	'Prompt User to select Excel file
+	Dim WbName as String = ChooseXlFile("c:\")
+	
+	'Handle possible error from function
+	If WbName = "" Then
+		MsgBox("File was not found.  Please try again")
+		Exit Sub
+	End If
+	
+	'Create Sketch
+	oSk3d = oSks3d.Add() 'create a 3d sketch
+	oSk3d.Name = SketchName
+	oSplines3d = oSk3d.SketchSplines3D
+	
+	'Crete points for spline
+	Dim oTG as TransientGeometry = ThisApplication.TransientGeometry
+	Dim oFitPoints as ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection
+	Dim oSplines as ObjectCollection = ThisApplication.TransientObjects.CreateObjectCollection
+	
+	'Open the workbook and get the sheet
+	Dim wb as Microsoft.Office.Interop.Excel.Workbook = xlApp.Workbooks.Open(WbName)
+	Dim SheetName as String = "Sheet1"
+	Dim ws as Microsoft.Office.Interop.Excel.Worksheet = wb.Worksheets.Item(SheetName)
+	
+	'Start reading in the values
+	Dim Row as Integer = 1
+	Dim Yval = ws.Cells(1, 2).Value
+	Dim Xval As String
+	Dim Zval As String
+	
+	newvalue:
+	While String.IsNullOrEmpty(ws.Cells(row+1, 2).Value) = False
+	
+		
+		
+		Xval = ws.Cells(row, 1).Value
+		Zval = ws.Cells(row, 3).Value
+		oFitPoints.Add(oTG.CreatePoint(Xval, Yval, Zval))
+		
+		' uContinue = MessageBox.Show("Continue? Row: " & row & " - " & Xval & "," & Yval & "," & Zval, "Keep runing?", MessageBoxButtons.OKCancel)
+		' IF uContinue = vbCancel Then
+			' goto quit
+		' End If
+		'Check if the next line is a different Y slice value
+		If ws.Cells(row+1, 2).Value <> Yval Then
+			'Create Spline
+			'msgbox("creating spline")
+			oSpline3d = oSplines3d.Add(oFitPoints, 26369)
+			oFitPoints.Clear 'Clear the list
+			oSplines.Add(oSpline3d)
+			Yval = ws.Cells(row + 1, 2).Value
+			row = row + 1 'increment the row
+			'goto newvalue
+		Else
+			row = row + 1
+			'Goto newvalue
+		End If		
+	End While
+	'msgbox(row)
+	Xval = ws.Cells(row, 1).Value
+	Zval = ws.Cells(row, 3).Value
+	oFitPoints.Add(oTG.CreatePoint(Xval, Yval, Zval))
+	oSpline3d = oSplines3d.Add(oFitPoints, 26369)
+	oSplines.Add(oSpline3d)
+	
+	quit:
+	wb.Close(True) 
+	
+	If openedByRule = True
+		xlApp.Quit
+	End If
+
+
+End Sub
+
+'Open excel
+'choose excel document, get the worksheet
+'read the values into point collection, starting at the beginning.  
+'when the Y value changes, create the spline with the existing points
+'reset the point collection, and continue reading, repeat until out of values
+
+Function ChooseXlFile(InitialDirectory as String) As String
+    Dim SelectedFile as String
+    Dim openFileDialog1 As New OpenFileDialog()
+
+    openFileDialog1.InitialDirectory = InitialDirectory
+    openFileDialog1.Filter = "Excel files (*.xls;*.xlsx)|*.xls;*.xlsx"
+    openFileDialog1.FilterIndex = 1
+    openFileDialog1.RestoreDirectory = False
+
+    If openFileDialog1.ShowDialog() = System.Windows.Forms.DialogResult.OK Then
+		Return openFileDialog1.FileName
+        ' Try
+            ' myStream = openFileDialog1.OpenFile()
+            ' If (myStream IsNot Nothing) Then
+				' Return myStream
+            ' End If
+        ' Catch Ex As Exception
+            ' MessageBox.Show("Cannot read file from disk. Original error: " & Ex.Message)
+        ' Finally
+            ' ' Check this again, since we need to make sure we didn't throw an exception on open.
+            ' If (myStream IsNot Nothing) Then
+                ' myStream.Close()
+            ' End If
+        ' End Try
+	Else 
+		Return ""
+    End If
+End Function
