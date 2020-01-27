@@ -20,10 +20,10 @@ Sub Main()
 		msgbox("Opening Excel...")
 		xlApp = CreateObject("Excel.Application")
 		xlOpenedByRule = True
-		
+		xlApp.Visible  = True
 		If Err.Number <> 0 Then	
 			MsgBox("Cannot access Excel")
-			Exit Sub
+			Exit Sub	
 		End If
 	End If
 	
@@ -48,8 +48,28 @@ Sub Main()
 	
 	'Open the workbook and get the sheet
 	Dim wb as Microsoft.Office.Interop.Excel.Workbook = xlApp.Workbooks.Open(WbName)
-	Dim SheetName as String = "Sheet1"
-	Dim ws as Microsoft.Office.Interop.Excel.Worksheet = wb.Worksheets.Item(SheetName)
+	If Err.Number <> 0 Then
+		Err.Clear
+		Msgbox("Error Opening Excel")
+		xlApp.Close(False)
+		Exit Sub
+	End If
+	
+	Dim ws as Microsoft.Office.Interop.Excel.Worksheet
+	Dim wsRaw as Microsoft.Office.Interop.Excel.Worksheet
+	Dim SheetName as New List(of String)
+	
+	'determine if multiple sheets exist, allow user to select sheet, if more than one.  
+	If wb.Worksheets.Count > 1 Then
+		For Each sht in wb.Worksheets
+			SheetName.Add(sht.Name)
+		Next
+		wsRaw = wb.Worksheets.Item(InputListBox("Please select a sheet. ", SheetName, SheetName(1), "Sheet Select"))
+		ws = doParsePoints(wb, wsRaw)
+	Else
+		wsRaw = wb.Worksheets.Item(1)
+		ws = doParsePoints(wb, wsRaw)
+	End If
 	
 	'Start reading in the values
 	Dim Row as Integer = 1
@@ -57,11 +77,8 @@ Sub Main()
 	Dim Xval As String
 	Dim Zval As String
 	
-	newvalue:
+
 	While String.IsNullOrEmpty(ws.Cells(row+1, 2).Value) = False
-	
-		
-		
 		Xval = ws.Cells(row, 1).Value
 		Zval = ws.Cells(row, 3).Value
 		oFitPoints.Add(oTG.CreatePoint(Xval, Yval, Zval))
@@ -79,10 +96,10 @@ Sub Main()
 			oSplines.Add(oSpline3d)
 			Yval = ws.Cells(row + 1, 2).Value
 			row = row + 1 'increment the row
-			'goto newvalue
+		
 		Else
 			row = row + 1
-			'Goto newvalue
+
 		End If		
 	End While
 	'msgbox(row)
@@ -107,6 +124,72 @@ End Sub
 'read the values into point collection, starting at the beginning.  
 'when the Y value changes, create the spline with the existing points
 'reset the point collection, and continue reading, repeat until out of values
+
+Function doParsePoints(wb as Microsoft.Office.Interop.Excel.Workbook, wsRaw as Microsoft.Office.Interop.Excel.Worksheet) As String
+	msgbox("starting parse")
+	
+	CoordSheet = wb.Worksheets.Add()
+	
+	If Err.Number <> 0 Then
+		msgbox("error creating sheet")
+		return ""		
+	Else
+		msgbox("sheet created")
+	End If
+	
+	CoordSheet.Name = (wsRaw.Name & " Coordinates")
+
+MsgBox("Sheet renamed : " & CoordSheet.Name)
+
+	'Define the beginning of the data in the sheet. 
+	Dim StartRow as Integer = 5
+	Dim StartCol as Integer = 2
+	Dim EndRow as Integer = 55
+	Dim EndCol as Integer = 52
+	Dim XIndexRow as Integer = 1
+	Dim YIndexCol as Integer = 4
+	
+	Dim CurYval As Double
+	Dim CurXval as Double
+	Dim CurZval as Double
+	
+	Dim DestRow As Integer = 1
+	Dim rCurRow As Integer
+	Dim rCurCol As Integer
+	
+	'iterate through all the rows of the table
+	For rCurRow = StartRow To EndRow
+		If String.IsNullOrEmpty(wsRaw.Cell(rCurRow, rCurCol).Value) = False 'check if Z value has something
+			Msgbox("Working on row #" & rCurRow)
+			'Get Y value for the row
+			CurYval = wsRaw.Cell(rCurRow, YIndexCol).Value
+			
+			'Iterate through all the columns 
+			For rCurCol = StartCol To EndCol
+				
+			
+				CurXval = wsRaw.Cell(XIndexRow, rCurCol).Value 'read the Xvalue from the top row
+				CurZval = wsRaw.Cell(rCurRow, rCurCol).Value
+				
+				'write the xvalue to the coordinate sheet
+				CoordSheet.Cell(DestRow, 1).Value = CurXval 
+				CoordSheet.Cell(DestRow, 2).Value = CurYval
+				CoordSheet.Cell(DestRow, 3).Value = CurZval
+				
+				DestRow = DestRow + 1
+				
+				MsgBox("Entering: " & CurXval & "," & CurYval & "," & CurZval)
+				
+			Next
+		Else 
+			Msgbox("Cell is Blank")
+		End If
+	Next
+
+	Return CoordSheet.Name
+	
+	msgbox("Parse complete")
+End Function
 
 Function ChooseXlFile(InitialDirectory as String) As String
     Dim SelectedFile as String
