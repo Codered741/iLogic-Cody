@@ -1,0 +1,301 @@
+' iLogic script to arrange cart assemblies within a truck's rectangular sketch on XY plane
+' Assumptions: Truck part named "Truck.ipt" with a sketch containing a single rectangle
+' Carts are existing assemblies, placed on XY plane with Z=0, no rotation
+' No CSV input/output
+
+Sub Main
+    ' Get the active assembly document
+    Dim oDoc As AssemblyDocument
+    oDoc = ThisApplication.ActiveDocument
+    
+    ' Get the truck part and its rectangle sketch
+    Dim truckPart As PartDocument
+    Dim truckRect As SketchEntity
+    Dim truckDims(1) As Double ' Use explicit array
+    truckPart = GetTruckPart(oDoc)
+    If truckPart Is Nothing Then
+        MsgBox("Truck.ipt not found!", vbCritical)
+        Exit Sub
+    End If
+    truckRect = GetTruckRectangle(truckPart)
+    If truckRect Is Nothing Then
+        MsgBox("No rectangle found in Truck.ipt sketch!", vbCritical)
+        Exit Sub
+    End If
+    truckDims = GetRectangleDimensions(truckRect) ' (width, length)
+    
+    ' Get all cart assemblies (exclude Truck.ipt)
+    Dim carts As Collection
+    carts = GetCartAssemblies(oDoc)
+    If carts.Count = 0 Then
+        MsgBox("No cart assemblies found!", vbCritical)
+        Exit Sub
+    End If
+    
+    ' Initialize truck state
+    Dim placedCarts As New Collection ' (cart, position)
+    Dim occupiedRects As New Collection ' (x, y, width, length)
+    
+    ' Sort carts by area (width * length) descending
+    Dim sortedCarts As Collection
+    sortedCarts = SortCartsByArea(carts)
+    
+    ' Place each cart
+    Dim cart As ComponentOccurrence
+    For Each cart In sortedCarts
+        Dim placed As Boolean
+        placed = False
+        Dim positions As Collection
+        positions = GeneratePositions(occupiedRects, truckDims)
+        Dim localCartDimensions(1) As Double ' Use explicit array
+        localCartDimensions = GetCartDimensions(cart) ' (width, length)
+        
+        ' Try each position
+        Dim pos As Object
+        For Each pos In positions
+            If CheckConstraints(cart, pos, localCartDimensions, truckDims, occupiedRects) Then
+                ' Place the cart
+                PlaceCart(cart, pos)
+                Dim cartPos(1) As Object
+                cartPos(0) = cart
+                cartPos(1) = pos
+                placedCarts.Add(cartPos)
+                Dim rectData(3) As Double
+                rectData(0) = pos(0)
+                rectData(1) = pos(1)
+                rectData(2) = localCartDimensions(0)
+                rectData(3) = localCartDimensions(1)
+                occupiedRects.Add(rectData)
+                placed = True
+                Exit For
+            End If
+        Next
+        If Not placed Then
+            MsgBox("Cannot place cart: " & cart.Name, vbExclamation)
+            Exit Sub
+        End If
+    Next
+    
+    ' Calculate area utilization
+    Dim totalCartArea As Double
+    totalCartArea = 0
+    For Each cart In sortedCarts
+        Dim cartDimensions(1) As Double
+        cartDimensions = GetCartDimensions(cart)
+        totalCartArea = totalCartArea + (cartDimensions(0) * cartDimensions(1))
+    Next
+    Dim truckArea As Double
+    truckArea = truckDims(0) * truckDims(1)
+    Dim utilization As Double
+    utilization = totalCartArea / truckArea
+    
+    ' Update the assembly and view
+    oDoc.Update()
+    ThisApplication.ActiveView.Fit()
+    ThisApplication.ActiveView.Update()
+    
+    ' Output results
+    Dim output As String
+    output = "Arrangement Complete!" & vbCrLf & _
+             "Utilization: " & FormatPercent(utilization, 2) & vbCrLf & _
+             "Placed Carts: " & placedCarts.Count & vbCrLf & _
+             "Details:" & vbCrLf
+    Dim placement As Object
+    For Each placement In placedCarts
+        output = output & "Cart: " & placement(0).Name & ", Position: (" & _
+                 FormatNumber(placement(1)(0), 2) & ", " & FormatNumber(placement(1)(1), 2) & ")" & vbCrLf
+    Next
+    MsgBox(output, vbInformation)
+End Sub
+
+' Get the Truck.ipt part document
+Function GetTruckPart(oDoc As AssemblyDocument) As PartDocument
+    Dim comp As ComponentOccurrence
+    For Each comp In oDoc.ComponentDefinition.Occurrences
+        If LCase(comp.Name) Like "*truck*" Then
+            GetTruckPart = comp.ReferencedDocumentDescriptor.ReferencedDocument
+            Exit Function
+        End If
+    Next
+    GetTruckPart = Nothing
+End Function
+
+' Get the rectangle from the truck's sketch
+Function GetTruckRectangle(truckPart As PartDocument) As SketchEntity
+    Dim sketch As PlanarSketch
+    For Each sketch In truckPart.ComponentDefinition.Sketches
+        If sketch.PlanarEntity.Name = "XY Plane" Then
+            Dim entity As SketchEntity
+            For Each entity In sketch.SketchEntities
+                If TypeOf entity Is SketchLine Then ' Approximate rectangle check
+                    GetTruckRectangle = entity
+                    Exit Function
+                End If
+            Next
+        End If
+    Next
+    GetTruckRectangle = Nothing
+End Function
+
+' Get rectangle dimensions (width, length)
+Function GetRectangleDimensions(rect As SketchEntity) As Double()
+    Dim sketch As PlanarSketch
+    sketch = rect.Parent
+    Dim lines As SketchLines
+    lines = sketch.SketchLines
+    Dim minX As Double, maxX As Double, minY As Double, maxY As Double
+    minX = 1E9: maxX = -1E9: minY = 1E9: maxY = -1E9
+    Dim line As SketchLine
+    For Each line In lines
+        minX = IIf(line.StartSketchPoint.Geometry.X < minX, line.StartSketchPoint.Geometry.X, minX)
+        maxX = IIf(line.StartSketchPoint.Geometry.X > maxX, line.StartSketchPoint.Geometry.X, maxX)
+        minY = IIf(line.StartSketchPoint.Geometry.Y < minY, line.StartSketchPoint.Geometry.Y, minY)
+        maxY = IIf(line.StartSketchPoint.Geometry.Y > maxY, line.StartSketchPoint.Geometry.Y, maxY)
+        minX = IIf(line.EndSketchPoint.Geometry.X < minX, line.EndSketchPoint.Geometry.X, minX)
+        maxX = IIf(line.EndSketchPoint.Geometry.X > maxX, line.EndSketchPoint.Geometry.X, maxX)
+        minY = IIf(line.EndSketchPoint.Geometry.Y < minY, line.EndSketchPoint.Geometry.Y, minY)
+        maxY = IIf(line.EndSketchPoint.Geometry.Y > maxY, line.EndSketchPoint.Geometry.Y, maxY)
+    Next
+    Dim dims(1) As Double
+    dims(0) = maxX - minX
+    dims(1) = maxY - minY
+    GetRectangleDimensions = dims
+End Function
+
+' Get all cart assemblies (exclude Truck.ipt)
+Function GetCartAssemblies(oDoc As AssemblyDocument) As Collection
+    Dim carts As New Collection
+    Dim comp As ComponentOccurrence
+    For Each comp In oDoc.ComponentDefinition.Occurrences
+        If Not LCase(comp.Name) Like "*truck.ipt*" Then
+            carts.Add(comp)
+        End If
+    Next
+    GetCartAssemblies = carts
+End Function
+
+' Sort carts by area (width * length)
+Function SortCartsByArea(carts As Collection) As Collection
+    Dim sorted As New Collection
+    Dim cartArray() As Object
+    ReDim cartArray(0 To carts.Count - 1)
+    Dim i As Integer
+    i = 0
+    Dim cart As ComponentOccurrence
+    For Each cart In carts
+        Dim dims(1) As Double
+        dims = GetCartDimensions(cart)
+        Dim cartData(1) As Object
+        cartData(0) = cart
+        cartData(1) = dims(0) * dims(1)
+        cartArray(i) = cartData
+        i = i + 1
+    Next
+    ' Bubble sort by area
+    Dim j As Integer
+    For i = 0 To UBound(cartArray) - 1
+        For j = i + 1 To UBound(cartArray)
+            If cartArray(i)(1) < cartArray(j)(1) Then
+                Dim temp As Object
+                temp = cartArray(i)
+                cartArray(i) = cartArray(j)
+                cartArray(j) = temp
+            End If
+        Next
+    Next
+    For i = 0 To UBound(cartArray)
+        sorted.Add(cartArray(i)(0))
+    Next
+    SortCartsByArea = sorted
+End Function
+
+' Get cart dimensions (width, length) from bounding box
+Function GetCartDimensions(cart As ComponentOccurrence) As Double()
+    Dim rangeBox As Box
+    rangeBox = cart.RangeBox
+    Dim width As Double, length As Double
+    width = rangeBox.MaxPoint.X - rangeBox.MinPoint.X
+    length = rangeBox.MaxPoint.Y - rangeBox.MinPoint.Y
+    Dim dims(1) As Double
+    dims(0) = width
+    dims(1) = length
+    GetCartDimensions = dims
+End Function
+
+' Generate possible positions (bottom-left heuristic)
+Function GeneratePositions(occupiedRects As Collection, truckDims() As Double) As Collection
+    Dim positions As New Collection
+    Dim initialPos(1) As Double
+    initialPos(0) = 0
+    initialPos(1) = 0
+    positions.Add(initialPos)
+    Dim rect As Object
+    For Each rect In occupiedRects
+        Dim pos1(1) As Double
+        pos1(0) = rect(0) + rect(2)
+        pos1(1) = rect(1)
+        positions.Add(pos1)
+        Dim pos2(1) As Double
+        pos2(0) = rect(0)
+        pos2(1) = rect(1) + rect(3)
+        positions.Add(pos2)
+    Next
+    ' Sort by x, then y
+    Dim sortedPos As New Collection
+    Dim posArray() As Object
+    ReDim posArray(0 To positions.Count - 1)
+    Dim i As Integer
+    i = 0
+    Dim pos As Object
+    For Each pos In positions
+        posArray(i) = pos
+        i = i + 1
+    Next
+    Dim j As Integer
+    For i = 0 To UBound(posArray) - 1
+        For j = i + 1 To UBound(posArray)
+            If posArray(i)(0) > posArray(j)(0) Or _
+               (posArray(i)(0) = posArray(j)(0) And posArray(i)(1) > posArray(j)(1)) Then
+                Dim temp As Object
+                temp = posArray(i)
+                posArray(i) = posArray(j)
+                posArray(j) = temp
+            End If
+        Next
+    Next
+    For i = 0 To UBound(posArray)
+        sortedPos.Add(posArray(i))
+    Next
+    GeneratePositions = sortedPos
+End Function
+
+' Check placement constraints
+Function CheckConstraints(cart As ComponentOccurrence, pos() As Double, dims() As Double, _
+                         truckDims() As Double, occupiedRects As Collection) As Boolean
+    ' Check boundary
+    If pos(0) + dims(0) > truckDims(0) Or pos(1) + dims(1) > truckDims(1) Then
+        CheckConstraints = False
+        Exit Function
+    End If
+    ' Check non-overlap
+    Dim rect As Object
+    For Each rect In occupiedRects
+        If Not (pos(0) + dims(0) <= rect(0) Or pos(0) >= rect(0) + rect(2) Or _
+                pos(1) + dims(1) <= rect(1) Or pos(1) >= rect(1) + rect(3)) Then
+            CheckConstraints = False
+            Exit Function
+        End If
+    Next
+    CheckConstraints = True
+End Function
+
+' Place cart at position
+Sub PlaceCart(cart As ComponentOccurrence, pos() As Double)
+    Dim oTG As TransientGeometry
+    oTG = ThisApplication.TransientGeometry
+    Dim matrix As Matrix
+    matrix = oTG.CreateMatrix
+    ' Set translation (x, y, 0)
+    matrix.SetTranslation(oTG.CreateVector(pos(0), pos(1), 0))
+    cart.Transformation = matrix
+End Sub
