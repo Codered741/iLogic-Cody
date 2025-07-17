@@ -1,7 +1,9 @@
 ' iLogic script to arrange cart assemblies within a truck's rectangular sketch on XY plane
 ' Assumptions: Truck part named contains "truck" (case-insensitive) with a sketch containing a single rectangle
-' Carts are placed on XY plane with Z=0, no rotation, sorted by browser tree order
-' Uses corner-based positions with 6-inch step size, retries up to 3 times without shuffling if a cart cannot be placed, all in inches
+' Carts are placed on XY plane with Z=0, no rotation, sorted by browser tree order initially
+' Uses corner-based positions with 0.5-inch step size, all in inches
+' Tries placing carts in browser tree order 5 times, then prompts once to shuffle smallest unplaceable cart earlier by one position if area <= 90%, retries up to 3 times
+' Shows utilization and placed cart count on success
 
 Sub Main
     Dim oDoc As AssemblyDocument
@@ -35,8 +37,10 @@ Sub Main
         Exit Sub
     End If
     
-    Dim maxRetries As Integer
-    maxRetries = 3
+    Dim maxInitialRetries As Integer
+    maxInitialRetries = 5
+    Dim maxShuffleRetries As Integer
+    maxShuffleRetries = 3
     Dim attempt As Integer
     attempt = 1
     Dim allPlaced As Boolean
@@ -44,22 +48,34 @@ Sub Main
     Dim placedCarts As Collection
     Dim occupiedRects As Collection
     Dim sortedCarts As Collection
-    sortedCarts = carts ' Browser tree order for all attempts
+    sortedCarts = carts ' Browser tree order initially
+    Dim unplacedCart As ComponentOccurrence
+    Dim totalCartArea As Double
+    totalCartArea = 0
+    Dim cart As ComponentOccurrence
+    For Each cart In sortedCarts
+        Dim cartDimensions(1) As Double
+        cartDimensions = GetCartDimensions(cart)
+        totalCartArea = totalCartArea + (cartDimensions(0) * cartDimensions(1))
+    Next
+    Dim truckArea As Double
+    truckArea = truckDims(0) * truckDims(1)
     
-    While attempt <= maxRetries And Not allPlaced
+    ' Initial attempts in browser tree order
+    While attempt <= maxInitialRetries And Not allPlaced
         placedCarts = New Collection
         occupiedRects = New Collection
         
-        ' Initialize progress bar
-        Dim oProgressBar As ProgressBar
-        oProgressBar = ThisApplication.CreateProgressBar(False, carts.Count, "Placing Carts (Attempt " & attempt & ")")
-        Dim cartIndex As Integer
-        cartIndex = 1
+        ' Progress bar commented out
+        'Dim oProgressBar As ProgressBar
+        'oProgressBar = ThisApplication.CreateProgressBar(False, carts.Count, "Placing Carts (Attempt " & attempt & ")")
+        'Dim cartIndex As Integer
+        'cartIndex = 1
         
         allPlaced = True
-        Dim cart As ComponentOccurrence
+        unplacedCart = Nothing
         For Each cart In sortedCarts
-            '.Message = "Processing cart " & cartIndex & " of " & carts.Count & " on attempt #" & attempt
+            'oProgressBar.Message = "Processing cart " & cartIndex & " of " & carts.Count
             Dim placed As Boolean
             placed = False
             Dim positions As Collection
@@ -87,31 +103,93 @@ Sub Main
             Next
             If Not placed Then
                 allPlaced = False
+                unplacedCart = cart
                 'oProgressBar.Close()
-                'MsgBox("Cannot place cart: " & cart.Name & " on attempt " & attempt, vbExclamation)
                 Exit For
             End If
-            cartIndex = cartIndex + 1
+            'cartIndex = cartIndex + 1
             'oProgressBar.UpdateProgress()
         Next
         'oProgressBar.Close()
         attempt = attempt + 1
     End While
     
+    ' If not all placed and area <= 90%, prompt to shuffle
+    If Not allPlaced And totalCartArea <= 0.9 * truckArea Then
+        Dim response As MsgBoxResult
+        response = MsgBox("Cannot place cart: " & unplacedCart.Name & " after " & maxInitialRetries & " attempts. " & vbCrLf & _
+                          "Total cart area is " & FormatPercent(totalCartArea / truckArea, 2) & " of truck area. " & vbCrLf & _
+                          "Would you like to shuffle the smallest unplaceable cart earlier and retry?", MsgBoxStyle.YesNo + MsgBoxStyle.Question, "Retry Placement")
+        If response = MsgBoxResult.No Then
+            MsgBox("Failed to place all carts after " & maxInitialRetries & " attempts.", vbCritical)
+            Exit Sub
+        End If
+        
+        ' Shuffle retries
+        sortedCarts = MoveSmallestUnplacedEarlier(unplacedCart, sortedCarts)
+        attempt = 1
+        While attempt <= maxShuffleRetries And Not allPlaced
+            placedCarts = New Collection
+            occupiedRects = New Collection
+            
+            ' Progress bar commented out
+            'Dim oProgressBar As ProgressBar
+            'oProgressBar = ThisApplication.CreateProgressBar(False, carts.Count, "Placing Carts (Shuffle Attempt " & attempt & ")")
+            'Dim cartIndex As Integer
+            'cartIndex = 1
+            
+            allPlaced = True
+            unplacedCart = Nothing
+            For Each cart In sortedCarts
+                'oProgressBar.Message = "Processing cart " & cartIndex & " of " & carts.Count
+                Dim placed As Boolean
+                placed = False
+                Dim positions As Collection
+                positions = GeneratePositions(occupiedRects, truckDims)
+                Dim localCartDimensions(1) As Double
+                localCartDimensions = GetCartDimensions(cart)
+                
+                Dim pos As Object
+                For Each pos In positions
+                    If CheckConstraints(cart, pos, localCartDimensions, truckDims, occupiedRects) Then
+                        PlaceCart(cart, pos)
+                        Dim cartPos(1) As Object
+                        cartPos(0) = cart
+                        cartPos(1) = pos
+                        placedCarts.Add(cartPos)
+                        Dim rectData(3) As Double
+                        rectData(0) = pos(0)
+                        rectData(1) = pos(1)
+                        rectData(2) = localCartDimensions(0)
+                        rectData(3) = localCartDimensions(1)
+                        occupiedRects.Add(rectData)
+                        placed = True
+                        Exit For
+                    End If
+                Next
+                If Not placed Then
+                    allPlaced = False
+                    unplacedCart = cart
+                    'oProgressBar.Close()
+                    Exit For
+                End If
+                'cartIndex = cartIndex + 1
+                'oProgressBar.UpdateProgress()
+            Next
+            'oProgressBar.Close()
+            
+            If Not allPlaced And attempt < maxShuffleRetries Then
+                sortedCarts = MoveSmallestUnplacedEarlier(unplacedCart, sortedCarts)
+            End If
+            attempt = attempt + 1
+        End While
+    End If
+    
     If Not allPlaced Then
-        MsgBox("Failed to place all carts after " & maxRetries & " attempts.", vbCritical)
+        MsgBox("Failed to place all carts after all attempts.", vbCritical)
         Exit Sub
     End If
     
-    Dim totalCartArea As Double
-    totalCartArea = 0
-    For Each cart In sortedCarts
-        Dim cartDimensions(1) As Double
-        cartDimensions = GetCartDimensions(cart)
-        totalCartArea = totalCartArea + (cartDimensions(0) * cartDimensions(1))
-    Next
-    Dim truckArea As Double
-    truckArea = truckDims(0) * truckDims(1)
     Dim utilization As Double
     utilization = totalCartArea / truckArea
     
@@ -122,13 +200,7 @@ Sub Main
     Dim output As String
     output = "Arrangement Complete!" & vbCrLf & _
              "Utilization: " & FormatPercent(utilization, 2) & vbCrLf & _
-             "Placed Carts: " & placedCarts.Count '& vbCrLf & _
-             '"Details:" & vbCrLf
-    Dim placement As Object
-    For Each placement In placedCarts
-        'output = output & "Cart: " & placement(0).Name & ", Position: (" & _
-        '        FormatNumber(placement(1)(0), 2) & ", " & FormatNumber(placement(1)(1), 2) & ")" & vbCrLf
-    Next
+             "Placed Carts: " & placedCarts.Count
     MsgBox(output, vbInformation)
 End Sub
 
@@ -215,7 +287,7 @@ End Function
 Function GeneratePositions(occupiedRects As Collection, truckDims() As Double) As Collection
     Dim positions As New Collection
     Dim stepSize As Double
-    stepSize = 6 ' Step size in inches for dense corner-based placement
+    stepSize = 0.5 ' Step size in inches for dense corner-based placement
     Dim initialPos(1) As Double
     initialPos(0) = 0
     initialPos(1) = 0
@@ -293,3 +365,36 @@ Sub PlaceCart(cart As ComponentOccurrence, pos() As Double)
     matrix.SetTranslation(oTG.CreateVector(pos(0), pos(1), 0))
     cart.Transformation = matrix
 End Sub
+
+Function MoveSmallestUnplacedEarlier(unplacedCart As ComponentOccurrence, carts As Collection) As Collection
+    Dim sortedCarts As New Collection
+    Dim cartArray() As ComponentOccurrence
+    ReDim cartArray(0 To carts.Count - 1)
+    Dim i As Integer
+    i = 0
+    Dim cart As ComponentOccurrence
+    For Each cart In carts
+        cartArray(i) = cart
+        i = i + 1
+    Next
+    ' Find index of unplaced cart
+    Dim unplacedIndex As Integer
+    unplacedIndex = -1
+    For i = 0 To carts.Count - 1
+        If cartArray(i) Is unplacedCart Then
+            unplacedIndex = i
+            Exit For
+        End If
+    Next
+    ' If unplaced cart is not first, swap with previous
+    If unplacedIndex > 0 Then
+        Dim temp As ComponentOccurrence
+        temp = cartArray(unplacedIndex)
+        cartArray(unplacedIndex) = cartArray(unplacedIndex - 1)
+        cartArray(unplacedIndex - 1) = temp
+    End If
+    For i = 0 To carts.Count - 1
+        sortedCarts.Add(cartArray(i))
+    Next
+    MoveSmallestUnplacedEarlier = sortedCarts
+End Function
