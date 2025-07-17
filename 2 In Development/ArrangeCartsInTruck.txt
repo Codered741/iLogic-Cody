@@ -1,7 +1,7 @@
 ' iLogic script to arrange cart assemblies within a truck's rectangular sketch on XY plane
 ' Assumptions: Truck part named contains "truck" (case-insensitive) with a sketch containing a single rectangle
 ' Carts are placed on XY plane with Z=0, no rotation, sorted by browser tree order
-' Uses corner-based positions with small step size for speed and dense placement, with progress bar
+' Uses corner-based positions with 6-inch step size, retries up to 3 times without shuffling if a cart cannot be placed, all in inches
 
 Sub Main
     Dim oDoc As AssemblyDocument
@@ -35,54 +35,73 @@ Sub Main
         Exit Sub
     End If
     
-    Dim placedCarts As New Collection
-    Dim occupiedRects As New Collection
+    Dim maxRetries As Integer
+    maxRetries = 3
+    Dim attempt As Integer
+    attempt = 1
+    Dim allPlaced As Boolean
+    allPlaced = False
+    Dim placedCarts As Collection
+    Dim occupiedRects As Collection
     Dim sortedCarts As Collection
-    sortedCarts = carts ' Browser tree order
+    sortedCarts = carts ' Browser tree order for all attempts
     
-    ' Initialize progress bar
-    Dim oProgressBar As ProgressBar
-    oProgressBar = ThisApplication.CreateProgressBar(False, carts.Count, "Placing Carts")
-    Dim cartIndex As Integer
-    cartIndex = 1
-    
-    Dim cart As ComponentOccurrence
-    For Each cart In sortedCarts
-        oProgressBar.Message = "Processing cart " & cartIndex & " of " & carts.Count
-        Dim placed As Boolean
-        placed = False
-        Dim positions As Collection
-        positions = GeneratePositions(occupiedRects, truckDims)
-        Dim localCartDimensions(1) As Double
-        localCartDimensions = GetCartDimensions(cart)
+    While attempt <= maxRetries And Not allPlaced
+        placedCarts = New Collection
+        occupiedRects = New Collection
         
-        Dim pos As Object
-        For Each pos In positions
-            If CheckConstraints(cart, pos, localCartDimensions, truckDims, occupiedRects) Then
-                PlaceCart(cart, pos)
-                Dim cartPos(1) As Object
-                cartPos(0) = cart
-                cartPos(1) = pos
-                placedCarts.Add(cartPos)
-                Dim rectData(3) As Double
-                rectData(0) = pos(0)
-                rectData(1) = pos(1)
-                rectData(2) = localCartDimensions(0)
-                rectData(3) = localCartDimensions(1)
-                occupiedRects.Add(rectData)
-                placed = True
+        ' Initialize progress bar
+        Dim oProgressBar As ProgressBar
+        oProgressBar = ThisApplication.CreateProgressBar(False, carts.Count, "Placing Carts (Attempt " & attempt & ")")
+        Dim cartIndex As Integer
+        cartIndex = 1
+        
+        allPlaced = True
+        Dim cart As ComponentOccurrence
+        For Each cart In sortedCarts
+            oProgressBar.Message = "Processing cart " & cartIndex & " of " & carts.Count & " on attempt #" & attempt
+            Dim placed As Boolean
+            placed = False
+            Dim positions As Collection
+            positions = GeneratePositions(occupiedRects, truckDims)
+            Dim localCartDimensions(1) As Double
+            localCartDimensions = GetCartDimensions(cart)
+            
+            Dim pos As Object
+            For Each pos In positions
+                If CheckConstraints(cart, pos, localCartDimensions, truckDims, occupiedRects) Then
+                    PlaceCart(cart, pos)
+                    Dim cartPos(1) As Object
+                    cartPos(0) = cart
+                    cartPos(1) = pos
+                    placedCarts.Add(cartPos)
+                    Dim rectData(3) As Double
+                    rectData(0) = pos(0)
+                    rectData(1) = pos(1)
+                    rectData(2) = localCartDimensions(0)
+                    rectData(3) = localCartDimensions(1)
+                    occupiedRects.Add(rectData)
+                    placed = True
+                    Exit For
+                End If
+            Next
+            If Not placed Then
+                allPlaced = False
+                oProgressBar.Close()
+                'MsgBox("Cannot place cart: " & cart.Name & " on attempt " & attempt, vbExclamation)
                 Exit For
             End If
+            cartIndex = cartIndex + 1
+            oProgressBar.UpdateProgress()
         Next
-        If Not placed Then
-            oProgressBar.Close
-            MsgBox("Cannot place cart: " & cart.Name, vbExclamation)
-            Exit Sub
-        End If
-        cartIndex = cartIndex + 1
-        oProgressBar.UpdateProgress
-    Next
-    oProgressBar.Close
+        oProgressBar.Close()
+        attempt = attempt + 1
+    End While
+    
+    If Not allPlaced Then
+        MsgBox("Failed to place all carts after " & maxRetries & " attempts.", vbCritical)
+        Exit Sub
+    End If
     
     Dim totalCartArea As Double
     totalCartArea = 0
@@ -96,9 +115,9 @@ Sub Main
     Dim utilization As Double
     utilization = totalCartArea / truckArea
     
-    oDoc.Update
-    ThisApplication.ActiveView.Fit
-    ThisApplication.ActiveView.Update
+    oDoc.Update()
+    ThisApplication.ActiveView.Fit()
+    ThisApplication.ActiveView.Update()
     
     Dim output As String
     output = "Arrangement Complete!" & vbCrLf & _
@@ -196,7 +215,7 @@ End Function
 Function GeneratePositions(occupiedRects As Collection, truckDims() As Double) As Collection
     Dim positions As New Collection
     Dim stepSize As Double
-    stepSize = 10 ' Small step size for dense corner-based placement
+    stepSize = 6 ' Step size in inches for dense corner-based placement
     Dim initialPos(1) As Double
     initialPos(0) = 0
     initialPos(1) = 0
