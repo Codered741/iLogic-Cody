@@ -1,5 +1,5 @@
 ' iLogic script to arrange cart assemblies within a truck's rectangular sketch on XY plane
-' Assumptions: Truck part named "Truck.ipt" with a sketch containing a single rectangle
+' Assumptions: Truck part named contains "truck" (case-insensitive) with a sketch containing a single rectangle
 ' Carts are existing assemblies, placed on XY plane with Z=0, no rotation
 ' No CSV input/output
 
@@ -11,22 +11,29 @@ Sub Main
     ' Get the truck part and its rectangle sketch
     Dim truckPart As PartDocument
     Dim truckRect As SketchEntity
-    Dim truckDims(1) As Double ' Use explicit array
+    Dim truckDims(1) As Double
     truckPart = GetTruckPart(oDoc)
     If truckPart Is Nothing Then
-        MsgBox("Truck.ipt not found!", vbCritical)
+        ' Debug: List all component names
+        Dim debugMsg As String
+        debugMsg = "Truck part not found! Available components:" & vbCrLf
+        Dim comp As ComponentOccurrence
+        For Each comp In oDoc.ComponentDefinition.Occurrences
+            debugMsg = debugMsg & comp.Name & vbCrLf
+        Next
+        MsgBox(debugMsg, vbCritical, "Error: Truck Part Not Found")
         Exit Sub
     End If
     truckRect = GetTruckRectangle(truckPart)
     If truckRect Is Nothing Then
-        MsgBox("No rectangle found in Truck.ipt sketch!", vbCritical)
+        MsgBox("No rectangle found in Truck part sketch!", vbCritical)
         Exit Sub
     End If
     truckDims = GetRectangleDimensions(truckRect) ' (width, length)
     
-    ' Get all cart assemblies (exclude Truck.ipt)
+    ' Get all cart assemblies (exclude Truck part)
     Dim carts As Collection
-    carts = GetCartAssemblies(oDoc)
+    carts = GetCartAssemblies(oDoc, truckPart)
     If carts.Count = 0 Then
         MsgBox("No cart assemblies found!", vbCritical)
         Exit Sub
@@ -47,7 +54,7 @@ Sub Main
         placed = False
         Dim positions As Collection
         positions = GeneratePositions(occupiedRects, truckDims)
-        Dim localCartDimensions(1) As Double ' Use explicit array
+        Dim localCartDimensions(1) As Double
         localCartDimensions = GetCartDimensions(cart) ' (width, length)
         
         ' Try each position
@@ -105,16 +112,18 @@ Sub Main
         output = output & "Cart: " & placement(0).Name & ", Position: (" & _
                  FormatNumber(placement(1)(0), 2) & ", " & FormatNumber(placement(1)(1), 2) & ")" & vbCrLf
     Next
-    MsgBox(output, vbInformation)
+    'MsgBox(output, vbInformation)
 End Sub
 
-' Get the Truck.ipt part document
+' Get the Truck part document
 Function GetTruckPart(oDoc As AssemblyDocument) As PartDocument
     Dim comp As ComponentOccurrence
     For Each comp In oDoc.ComponentDefinition.Occurrences
         If LCase(comp.Name) Like "*truck*" Then
-            GetTruckPart = comp.ReferencedDocumentDescriptor.ReferencedDocument
-            Exit Function
+            If TypeOf comp.ReferencedDocumentDescriptor.ReferencedDocument Is PartDocument Then
+                GetTruckPart = comp.ReferencedDocumentDescriptor.ReferencedDocument
+                Exit Function
+            End If
         End If
     Next
     GetTruckPart = Nothing
@@ -162,12 +171,12 @@ Function GetRectangleDimensions(rect As SketchEntity) As Double()
     GetRectangleDimensions = dims
 End Function
 
-' Get all cart assemblies (exclude Truck.ipt)
-Function GetCartAssemblies(oDoc As AssemblyDocument) As Collection
+' Get all cart assemblies (exclude Truck part)
+Function GetCartAssemblies(oDoc As AssemblyDocument, truckPart As PartDocument) As Collection
     Dim carts As New Collection
     Dim comp As ComponentOccurrence
     For Each comp In oDoc.ComponentDefinition.Occurrences
-        If Not LCase(comp.Name) Like "*truck.ipt*" Then
+        If truckPart Is Nothing OrElse comp.ReferencedDocumentDescriptor.ReferencedDocument IsNot truckPart Then
             carts.Add(comp)
         End If
     Next
