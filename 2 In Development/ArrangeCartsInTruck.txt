@@ -1,6 +1,6 @@
 ' iLogic script to arrange cart assemblies within a truck's rectangular sketch on XY plane
 ' Assumptions: Truck part named contains "truck" (case-insensitive) with a sketch containing a single rectangle
-' Carts are existing assemblies, placed on XY plane with Z=0, no rotation
+' Carts are existing assemblies, placed on XY plane with Z=0, no rotation, sorted by browser tree order
 ' No CSV input/output
 
 Sub Main
@@ -43,9 +43,9 @@ Sub Main
     Dim placedCarts As New Collection ' (cart, position)
     Dim occupiedRects As New Collection ' (x, y, width, length)
     
-    ' Sort carts by area (width * length) descending
+    ' Use carts in browser tree order (no sorting by area)
     Dim sortedCarts As Collection
-    sortedCarts = SortCartsByArea(carts)
+    sortedCarts = carts ' Direct assignment, preserves browser tree order
     
     ' Place each cart
     Dim cart As ComponentOccurrence
@@ -112,7 +112,7 @@ Sub Main
         output = output & "Cart: " & placement(0).Name & ", Position: (" & _
                  FormatNumber(placement(1)(0), 2) & ", " & FormatNumber(placement(1)(1), 2) & ")" & vbCrLf
     Next
-    'MsgBox(output, vbInformation)
+    MsgBox(output, vbInformation)
 End Sub
 
 ' Get the Truck part document
@@ -183,39 +183,10 @@ Function GetCartAssemblies(oDoc As AssemblyDocument, truckPart As PartDocument) 
     GetCartAssemblies = carts
 End Function
 
-' Sort carts by area (width * length)
+' Return carts in browser tree order
 Function SortCartsByArea(carts As Collection) As Collection
-    Dim sorted As New Collection
-    Dim cartArray() As Object
-    ReDim cartArray(0 To carts.Count - 1)
-    Dim i As Integer
-    i = 0
-    Dim cart As ComponentOccurrence
-    For Each cart In carts
-        Dim dims(1) As Double
-        dims = GetCartDimensions(cart)
-        Dim cartData(1) As Object
-        cartData(0) = cart
-        cartData(1) = dims(0) * dims(1)
-        cartArray(i) = cartData
-        i = i + 1
-    Next
-    ' Bubble sort by area
-    Dim j As Integer
-    For i = 0 To UBound(cartArray) - 1
-        For j = i + 1 To UBound(cartArray)
-            If cartArray(i)(1) < cartArray(j)(1) Then
-                Dim temp As Object
-                temp = cartArray(i)
-                cartArray(i) = cartArray(j)
-                cartArray(j) = temp
-            End If
-        Next
-    Next
-    For i = 0 To UBound(cartArray)
-        sorted.Add(cartArray(i)(0))
-    Next
-    SortCartsByArea = sorted
+    ' No sorting, return carts in original browser tree order
+    SortCartsByArea = carts
 End Function
 
 ' Get cart dimensions (width, length) from bounding box
