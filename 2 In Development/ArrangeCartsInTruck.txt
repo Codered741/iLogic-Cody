@@ -59,7 +59,7 @@ Sub Main
         allPlaced = True
         Dim cart As ComponentOccurrence
         For Each cart In sortedCarts
-            oProgressBar.Message = "Processing cart " & cartIndex & " of " & carts.Count & " on attempt #" & attempt
+            '.Message = "Processing cart " & cartIndex & " of " & carts.Count & " on attempt #" & attempt
             Dim placed As Boolean
             placed = False
             Dim positions As Collection
@@ -87,14 +87,14 @@ Sub Main
             Next
             If Not placed Then
                 allPlaced = False
-                oProgressBar.Close()
+                'oProgressBar.Close()
                 'MsgBox("Cannot place cart: " & cart.Name & " on attempt " & attempt, vbExclamation)
                 Exit For
             End If
             cartIndex = cartIndex + 1
-            oProgressBar.UpdateProgress()
+            'oProgressBar.UpdateProgress()
         Next
-        oProgressBar.Close()
+        'oProgressBar.Close()
         attempt = attempt + 1
     End While
     
@@ -122,12 +122,12 @@ Sub Main
     Dim output As String
     output = "Arrangement Complete!" & vbCrLf & _
              "Utilization: " & FormatPercent(utilization, 2) & vbCrLf & _
-             "Placed Carts: " & placedCarts.Count & vbCrLf & _
-             "Details:" & vbCrLf
+             "Placed Carts: " & placedCarts.Count '& vbCrLf & _
+             '"Details:" & vbCrLf
     Dim placement As Object
     For Each placement In placedCarts
-        output = output & "Cart: " & placement(0).Name & ", Position: (" & _
-                 FormatNumber(placement(1)(0), 2) & ", " & FormatNumber(placement(1)(1), 2) & ")" & vbCrLf
+        'output = output & "Cart: " & placement(0).Name & ", Position: (" & _
+        '        FormatNumber(placement(1)(0), 2) & ", " & FormatNumber(placement(1)(1), 2) & ")" & vbCrLf
     Next
     MsgBox(output, vbInformation)
 End Sub
