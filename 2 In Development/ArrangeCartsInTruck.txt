@@ -1,20 +1,17 @@
 ' iLogic script to arrange cart assemblies within a truck's rectangular sketch on XY plane
 ' Assumptions: Truck part named contains "truck" (case-insensitive) with a sketch containing a single rectangle
 ' Carts are existing assemblies, placed on XY plane with Z=0, no rotation, sorted by browser tree order
-' No CSV input/output
+' No CSV input/output, denser position grid for optimized placement
 
 Sub Main
-    ' Get the active assembly document
     Dim oDoc As AssemblyDocument
     oDoc = ThisApplication.ActiveDocument
     
-    ' Get the truck part and its rectangle sketch
     Dim truckPart As PartDocument
     Dim truckRect As SketchEntity
     Dim truckDims(1) As Double
     truckPart = GetTruckPart(oDoc)
     If truckPart Is Nothing Then
-        ' Debug: List all component names
         Dim debugMsg As String
         debugMsg = "Truck part not found! Available components:" & vbCrLf
         Dim comp As ComponentOccurrence
@@ -29,9 +26,8 @@ Sub Main
         MsgBox("No rectangle found in Truck part sketch!", vbCritical)
         Exit Sub
     End If
-    truckDims = GetRectangleDimensions(truckRect) ' (width, length)
+    truckDims = GetRectangleDimensions(truckRect)
     
-    ' Get all cart assemblies (exclude Truck part)
     Dim carts As Collection
     carts = GetCartAssemblies(oDoc, truckPart)
     If carts.Count = 0 Then
@@ -39,15 +35,11 @@ Sub Main
         Exit Sub
     End If
     
-    ' Initialize truck state
-    Dim placedCarts As New Collection ' (cart, position)
-    Dim occupiedRects As New Collection ' (x, y, width, length)
-    
-    ' Use carts in browser tree order (no sorting by area)
+    Dim placedCarts As New Collection
+    Dim occupiedRects As New Collection
     Dim sortedCarts As Collection
-    sortedCarts = carts ' Direct assignment, preserves browser tree order
+    sortedCarts = carts ' Browser tree order
     
-    ' Place each cart
     Dim cart As ComponentOccurrence
     For Each cart In sortedCarts
         Dim placed As Boolean
@@ -55,13 +47,11 @@ Sub Main
         Dim positions As Collection
         positions = GeneratePositions(occupiedRects, truckDims)
         Dim localCartDimensions(1) As Double
-        localCartDimensions = GetCartDimensions(cart) ' (width, length)
+        localCartDimensions = GetCartDimensions(cart)
         
-        ' Try each position
         Dim pos As Object
         For Each pos In positions
             If CheckConstraints(cart, pos, localCartDimensions, truckDims, occupiedRects) Then
-                ' Place the cart
                 PlaceCart(cart, pos)
                 Dim cartPos(1) As Object
                 cartPos(0) = cart
@@ -83,7 +73,6 @@ Sub Main
         End If
     Next
     
-    ' Calculate area utilization
     Dim totalCartArea As Double
     totalCartArea = 0
     For Each cart In sortedCarts
@@ -96,12 +85,10 @@ Sub Main
     Dim utilization As Double
     utilization = totalCartArea / truckArea
     
-    ' Update the assembly and view
     oDoc.Update()
     ThisApplication.ActiveView.Fit()
     ThisApplication.ActiveView.Update()
     
-    ' Output results
     Dim output As String
     output = "Arrangement Complete!" & vbCrLf & _
              "Utilization: " & FormatPercent(utilization, 2) & vbCrLf & _
@@ -115,7 +102,6 @@ Sub Main
     MsgBox(output, vbInformation)
 End Sub
 
-' Get the Truck part document
 Function GetTruckPart(oDoc As AssemblyDocument) As PartDocument
     Dim comp As ComponentOccurrence
     For Each comp In oDoc.ComponentDefinition.Occurrences
@@ -129,14 +115,13 @@ Function GetTruckPart(oDoc As AssemblyDocument) As PartDocument
     GetTruckPart = Nothing
 End Function
 
-' Get the rectangle from the truck's sketch
 Function GetTruckRectangle(truckPart As PartDocument) As SketchEntity
     Dim sketch As PlanarSketch
     For Each sketch In truckPart.ComponentDefinition.Sketches
         If sketch.PlanarEntity.Name = "XY Plane" Then
             Dim entity As SketchEntity
             For Each entity In sketch.SketchEntities
-                If TypeOf entity Is SketchLine Then ' Approximate rectangle check
+                If TypeOf entity Is SketchLine Then
                     GetTruckRectangle = entity
                     Exit Function
                 End If
@@ -146,7 +131,6 @@ Function GetTruckRectangle(truckPart As PartDocument) As SketchEntity
     GetTruckRectangle = Nothing
 End Function
 
-' Get rectangle dimensions (width, length)
 Function GetRectangleDimensions(rect As SketchEntity) As Double()
     Dim sketch As PlanarSketch
     sketch = rect.Parent
@@ -171,7 +155,6 @@ Function GetRectangleDimensions(rect As SketchEntity) As Double()
     GetRectangleDimensions = dims
 End Function
 
-' Get all cart assemblies (exclude Truck part)
 Function GetCartAssemblies(oDoc As AssemblyDocument, truckPart As PartDocument) As Collection
     Dim carts As New Collection
     Dim comp As ComponentOccurrence
@@ -183,13 +166,10 @@ Function GetCartAssemblies(oDoc As AssemblyDocument, truckPart As PartDocument) 
     GetCartAssemblies = carts
 End Function
 
-' Return carts in browser tree order
 Function SortCartsByArea(carts As Collection) As Collection
-    ' No sorting, return carts in original browser tree order
     SortCartsByArea = carts
 End Function
 
-' Get cart dimensions (width, length) from bounding box
 Function GetCartDimensions(cart As ComponentOccurrence) As Double()
     Dim rangeBox As Box
     rangeBox = cart.RangeBox
@@ -202,33 +182,27 @@ Function GetCartDimensions(cart As ComponentOccurrence) As Double()
     GetCartDimensions = dims
 End Function
 
-' Generate possible positions (bottom-left heuristic)
 Function GeneratePositions(occupiedRects As Collection, truckDims() As Double) As Collection
     Dim positions As New Collection
-    Dim initialPos(1) As Double
-    initialPos(0) = 0
-    initialPos(1) = 0
-    positions.Add(initialPos)
-    Dim rect As Object
-    For Each rect In occupiedRects
-        Dim pos1(1) As Double
-        pos1(0) = rect(0) + rect(2)
-        pos1(1) = rect(1)
-        positions.Add(pos1)
-        Dim pos2(1) As Double
-        pos2(0) = rect(0)
-        pos2(1) = rect(1) + rect(3)
-        positions.Add(pos2)
+    Dim stepSize As Double
+    stepSize = 10 ' Grid step size in cm for denser placement
+    Dim x As Double, y As Double
+    For x = 0 To truckDims(0) Step stepSize
+        For y = 0 To truckDims(1) Step stepSize
+            Dim pos(1) As Double
+            pos(0) = x
+            pos(1) = y
+            positions.Add(pos)
+        Next
     Next
-    ' Sort by x, then y
     Dim sortedPos As New Collection
     Dim posArray() As Object
     ReDim posArray(0 To positions.Count - 1)
     Dim i As Integer
     i = 0
-    Dim pos As Object
-    For Each pos In positions
-        posArray(i) = pos
+    Dim position As Object ' Renamed to avoid shadowing
+    For Each position In positions
+        posArray(i) = position
         i = i + 1
     Next
     Dim j As Integer
@@ -249,15 +223,12 @@ Function GeneratePositions(occupiedRects As Collection, truckDims() As Double) A
     GeneratePositions = sortedPos
 End Function
 
-' Check placement constraints
 Function CheckConstraints(cart As ComponentOccurrence, pos() As Double, dims() As Double, _
                          truckDims() As Double, occupiedRects As Collection) As Boolean
-    ' Check boundary
     If pos(0) + dims(0) > truckDims(0) Or pos(1) + dims(1) > truckDims(1) Then
         CheckConstraints = False
         Exit Function
     End If
-    ' Check non-overlap
     Dim rect As Object
     For Each rect In occupiedRects
         If Not (pos(0) + dims(0) <= rect(0) Or pos(0) >= rect(0) + rect(2) Or _
@@ -269,13 +240,11 @@ Function CheckConstraints(cart As ComponentOccurrence, pos() As Double, dims() A
     CheckConstraints = True
 End Function
 
-' Place cart at position
 Sub PlaceCart(cart As ComponentOccurrence, pos() As Double)
     Dim oTG As TransientGeometry
     oTG = ThisApplication.TransientGeometry
     Dim matrix As Matrix
     matrix = oTG.CreateMatrix
-    ' Set translation (x, y, 0)
     matrix.SetTranslation(oTG.CreateVector(pos(0), pos(1), 0))
     cart.Transformation = matrix
 End Sub
